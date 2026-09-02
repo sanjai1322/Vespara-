@@ -1,0 +1,130 @@
+---
+import {
+  MAX_PLATE, roomsFor, plateRect, doorPath, balconyLines, glazingLines, DIM_OFF,
+  labelSize, labelPos,
+} from '../lib/plan.js';
+
+const { residence } = Astro.props;
+const rooms = roomsFor(residence);
+const plate = plateRect(residence);
+const bal = balconyLines(rooms.find((r) => r.balcony));
+const glaze = glazingLines(rooms.find((r) => r.glaze));
+
+// label placement resolved up front: size fitted to the room, position
+// pushed clear of the door swing. Rooms too small for a legible label are
+// dropped rather than smeared across a wall.
+// This plan renders wider on a phone screen than the desktop pinned plan
+// does, so a bigger base type reads correctly there — but ONLY for rooms
+// that already fit comfortably at that size. A narrow room (a shared
+// bedroom wall) is already at its maximum non-overlapping size regardless
+// of base, so this never pushes two labels into each other; it only makes
+// the roomy labels (KITCHEN, LIVING, HALL) bigger, which is what the bump
+// was for.
+const MOBILE_LABEL_BASE = 6.5;
+const roomLabels = rooms
+  .filter((rm) => rm.w > 0 && labelSize(rm, MOBILE_LABEL_BASE) > 0)
+  .map((rm) => ({ label: rm.label, fs: labelSize(rm, MOBILE_LABEL_BASE), ...labelPos(rm) }));
+
+const VB_X = -DIM_OFF - 16;
+const VB_Y = -16;
+const VB_W = MAX_PLATE.w + DIM_OFF + 44;
+const VB_H = MAX_PLATE.h + DIM_OFF + 48;
+---
+
+<svg
+  class="planstatic"
+  data-plan-static
+  viewBox={`${VB_X} ${VB_Y} ${VB_W} ${VB_H}`}
+  preserveAspectRatio="xMidYMid meet"
+  aria-hidden="true"
+>
+  {rooms.map((rm) =>
+    rm.w > 0 && <rect class="plan-part" x={rm.x} y={rm.y} width={rm.w} height={rm.h} />
+  )}
+
+  {bal.map((b) => <line class="plan-balcony" x1={b.x1} y1={b.y1} x2={b.x2} y2={b.y2} />)}
+  {glaze.map((g) => <line class="plan-glaze" x1={g.x1} y1={g.y1} x2={g.x2} y2={g.y2} />)}
+
+  {rooms.map((rm) => {
+    const d = doorPath(rm);
+    return d && <path class="plan-door" d={d} />;
+  })}
+
+  <rect class="plan-exterior" x={plate.x} y={plate.y} width={plate.w} height={plate.h} />
+
+  <g class="plan-dims">
+    <line class="dim-line" x1={plate.x} y1={plate.y + plate.h + DIM_OFF} x2={plate.x + plate.w} y2={plate.y + plate.h + DIM_OFF} />
+    <line class="dim-tick" x1={plate.x} y1={plate.y + plate.h + DIM_OFF - 5} x2={plate.x} y2={plate.y + plate.h + DIM_OFF + 5} />
+    <line class="dim-tick" x1={plate.x + plate.w} y1={plate.y + plate.h + DIM_OFF - 5} x2={plate.x + plate.w} y2={plate.y + plate.h + DIM_OFF + 5} />
+    <text class="dim-text" x={plate.x + plate.w / 2} y={plate.y + plate.h + DIM_OFF - 6} text-anchor="middle">{residence.dims.w}</text>
+
+    <line class="dim-line" x1={plate.x - DIM_OFF} y1={plate.y} x2={plate.x - DIM_OFF} y2={plate.y + plate.h} />
+    <line class="dim-tick" x1={plate.x - DIM_OFF - 5} y1={plate.y} x2={plate.x - DIM_OFF + 5} y2={plate.y} />
+    <line class="dim-tick" x1={plate.x - DIM_OFF - 5} y1={plate.y + plate.h} x2={plate.x - DIM_OFF + 5} y2={plate.y + plate.h} />
+    <text
+      class="dim-text"
+      x={plate.x - DIM_OFF - 7}
+      y={plate.y + plate.h / 2}
+      text-anchor="middle"
+      transform={`rotate(-90 ${plate.x - DIM_OFF - 7} ${plate.y + plate.h / 2})`}
+    >{residence.dims.h}</text>
+  </g>
+
+  {roomLabels.map((l) => (
+    <text
+      class="plan-label"
+      font-size={l.fs}
+      x={l.x}
+      y={l.y}
+      text-anchor="middle"
+      dominant-baseline="middle"
+    >{l.label}</text>
+  ))}
+</svg>
+
+<style>
+  .planstatic {
+    width: 100%;
+    height: auto;
+    overflow: visible;
+  }
+  .planstatic :global(rect),
+  .planstatic :global(path),
+  .planstatic :global(line) {
+    fill: none;
+    stroke: var(--hairline);
+    stroke-width: 1;
+    vector-effect: non-scaling-stroke;
+  }
+  .planstatic :global(.plan-exterior) {
+    stroke: rgba(28, 27, 24, 0.55);
+    stroke-width: 2;
+  }
+  .planstatic :global(.plan-door) { stroke: rgba(28, 27, 24, 0.22); }
+  .planstatic :global(.plan-balcony) { stroke: rgba(28, 27, 24, 0.1); }
+  .planstatic :global(.plan-glaze) { stroke: rgba(28, 27, 24, 0.3); stroke-width: 0.75; }
+  .planstatic :global(.dim-line),
+  .planstatic :global(.dim-tick) { stroke: rgba(28, 27, 24, 0.2); }
+  .planstatic :global(.plan-label),
+  .planstatic :global(.dim-text) {
+    fill: var(--graphite);
+    stroke: none;
+    font-family: var(--grotesque);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    font-variant-numeric: tabular-nums;
+  }
+  /* font-size is intentionally NOT set here for .plan-label: each <text>
+     carries its own fitted size as an attribute (see MOBILE_LABEL_BASE
+     above). A CSS font-size here would win over that attribute and silently
+     defeat the per-room fit, which is exactly what put BED 01/02/03's
+     labels on top of each other before this was found. */
+  .planstatic :global(.plan-label) { fill-opacity: 0.5; letter-spacing: 0.06em; }
+  .planstatic :global(.dim-text) { fill-opacity: 0.6; font-size: 6.2px; }
+
+  /* mobile: the dimension strings sit in open margin, not inside a room, so
+     a blanket bump is safe for them the way it never was for room labels */
+  @media (max-width: 768px) {
+    .planstatic :global(.dim-text) { font-size: 8.4px; }
+  }
+</style>

@@ -1,0 +1,119 @@
+---
+import site from '../config/site.config.js';
+import Monogram from './Monogram.astro';
+---
+
+<header class="nav" data-nav>
+  <a class="nav-brand" href="#top">
+    <Monogram class="nav-mono" color="var(--nav-color)" size="1.5cqw" />
+    <span class="nav-divider"></span>
+    <span class="nav-wordmark">{site.brand}</span>
+  </a>
+
+  <nav class="nav-links" aria-label="Primary">
+    {site.nav.map((item) => (
+      <a
+        class="nav-link"
+        href={`#${site.navTargets[item]}`}
+        data-nav-link={site.navTargets[item]}
+      >
+        {item}
+        <span class="nav-link__ul" data-nav-ul></span>
+      </a>
+    ))}
+  </nav>
+</header>
+
+<style>
+  .nav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 2.2cqw 4cqw;
+    color: var(--nav-color);
+    transition: color 0.6s ease;
+    pointer-events: none;
+    will-change: transform;
+  }
+  .nav a { pointer-events: auto; }
+
+  .nav-brand {
+    display: flex;
+    align-items: center;
+    gap: 1cqw;
+  }
+  .nav-mono {
+    width: 1.5cqw;
+    height: 1.5cqw;
+    flex: none;
+  }
+  .nav-divider {
+    display: block;
+    width: 1px;
+    height: 1.6cqw;
+    background: currentColor;
+    opacity: 0.28;
+  }
+  .nav-wordmark {
+    font-family: var(--serif);
+    font-size: 1.8cqw;
+    letter-spacing: 0.32em;
+    font-weight: 500;
+    text-indent: 0.32em;
+  }
+
+  .nav-links {
+    display: flex;
+    gap: 2.4cqw;
+  }
+
+  .nav-link {
+    position: relative;
+    font-family: var(--grotesque);
+    font-size: 0.85cqw;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    font-weight: 500;
+    padding-bottom: 0.5cqw;
+  }
+
+  /* --- mobile: type scales up and links carry enough padding to clear a
+         44px tap target --- */
+  @media (max-width: 768px) {
+    .nav {
+      padding: 1.6cqh 5cqw;
+    }
+    .nav-brand { padding: 1.4cqh 0; }   /* clears 44px */
+    .nav-mono { width: 5cqw; height: 5cqw; }
+    .nav-divider { height: 4.4cqw; }
+    .nav-wordmark { font-size: 4.4cqw; }
+
+    /* Five text links cannot fit 390px without shrinking below a usable
+       tap target. Keep the one that matters — the site is scroll-driven. */
+    .nav-link { display: none; }
+    .nav-link[data-nav-link='enquire'] {
+      display: block;
+      font-size: 2.8cqw;
+      letter-spacing: 0.14em;
+      padding: 2.2cqh 2cqw;   /* >= 44px in both axes */
+    }
+  }
+
+  /* the active underline — one of the bronze placements. Width is animated
+     from 0 by the motion layer as each section enters and leaves. */
+  .nav-link__ul {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    height: 1px;
+    background: var(--bronze);
+    transform-origin: left center;
+    transform: scaleX(0);
+  }
+</style>

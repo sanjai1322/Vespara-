@@ -1,0 +1,309 @@
+/* =========================================================================
+   VESPERA — global design system
+   Restrained architectural luxury. Swiss editorial. The restraint IS the
+   design: no gradients, no shadows, no rounded corners, no hover lifts.
+   ========================================================================= */
+
+:root {
+  /* --- colour tokens --- */
+  --limestone: #F4F1EA;              /* dominant light ground             */
+  --bone:      #FDFCF9;              /* panel white, slightly warm         */
+  --sand:      #E8E3D5;              /* warm sand                          */
+  --charcoal:  #1C1B18;              /* type on light, ground on dark      */
+  --deepblack: #0A0A09;              /* true depth for cinematic contrast  */
+  --graphite:  #4A4843;              /* secondary type                     */
+  --bronze:    #8A6A3B;              /* the ONLY accent — used 4x total    */
+  --hairline:  rgba(28, 27, 24, 0.14);
+  --hairline-light: rgba(253, 252, 249, 0.14);
+
+  /* --- type families --- */
+  /* Didone serif: wordmark, headings, pull quotes.                        */
+  --serif: 'Playfair Display', 'Times New Roman', Georgia, serif;
+  /* Neutral grotesque: nav, labels, table headers. Not Inter/Roboto/etc.  */
+  --grotesque: 'Archivo', 'Helvetica Neue', Helvetica, sans-serif;
+
+  /* --- nav colour, inverted per section --- */
+  --nav-color: var(--charcoal);
+}
+
+/* --- reset --- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  background: var(--limestone);
+  color: var(--charcoal);
+  font-family: var(--serif);
+  line-height: 1.4;
+}
+
+img {
+  display: block;
+  max-width: 100%;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* =========================================================================
+   SIZING SYSTEM
+   Every section is a container-query context sized against a 16:9 stage.
+   All type, spacing, padding and gaps are expressed in cqw / cqh.
+   The only permitted px value anywhere is the 1px hairline border.
+   ========================================================================= */
+
+.section {
+  position: relative;
+  width: 100%;
+  height: 100vh;                 /* the 16:9 stage, locked to the viewport */
+  container-type: size;
+  container-name: stage;
+  overflow: hidden;
+  /* each section paints over the one before it, so a lagging outgoing
+     section is covered rather than leaving a gap */
+  isolation: isolate;
+  background: var(--limestone);
+}
+
+/* Full-bleed image stages carry light type and an inverted nav. */
+.section--bleed {
+  --nav-color: var(--bone);
+  background: var(--charcoal);
+}
+
+/* Every photographic frame. Always present; it only settles (prompt 5). */
+.frame {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  will-change: transform;
+}
+
+/* Full-bleed frames carry a vertical buffer so parallax travel never
+   exposes an edge (the section clips the overflow). */
+.section--bleed .frame {
+  height: 112%;
+  top: -6%;
+}
+
+/* =========================================================================
+   TYPE PRIMITIVES  (all scale off the container — cqw is the base unit)
+   ========================================================================= */
+
+.t-body {
+  font-family: var(--serif);
+  font-size: 2.2cqw;
+  line-height: 1.5;
+  color: var(--graphite);
+  text-wrap: pretty;   /* widow control */
+}
+
+/* every figure in the site sets tabular so digits don't jitter on count */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Unit superscript. Sized at 0.55em and shifted so its top aligns with the
+   figure's CAP HEIGHT rather than floating above it — the default <sup>
+   position is the tell. */
+.unit-sup {
+  font-size: 0.55em;
+  vertical-align: baseline;
+  position: relative;
+  top: -0.34em;
+  line-height: 0;
+}
+
+.t-heading {
+  font-family: var(--serif);
+  font-size: 4.5cqw;
+  line-height: 1.08;
+  /* serifs at display size need tightening; 0 is a default-setting tell */
+  letter-spacing: -0.01em;
+  color: var(--charcoal);
+  font-weight: 500;
+  text-wrap: pretty;
+}
+
+.t-heading-huge {
+  font-family: var(--serif);
+  font-size: 9cqw;
+  line-height: 0.9;
+  letter-spacing: -0.02em;
+  color: var(--charcoal);
+  font-weight: 400;
+  text-wrap: balance;
+}
+
+.t-label {
+  font-family: var(--grotesque);
+  font-size: 0.9cqw;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--charcoal);
+  font-weight: 500;
+}
+
+/* =========================================================================
+   GLOBAL PROGRESS SYSTEM
+   ========================================================================= */
+.global-progress {
+  position: fixed;
+  left: 2vw;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 40vh;
+  width: 1px;
+  background: var(--hairline);
+  z-index: 100;
+  pointer-events: none;
+  mix-blend-mode: difference;
+}
+
+.global-progress__bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 2px;
+  height: 100%;
+  background: rgba(28, 27, 24, 0.7);
+  transform-origin: top;
+  transform: scaleY(0);
+}
+
+.global-progress__text {
+  position: absolute;
+  left: 12px;
+  top: 0;
+  font-family: var(--grotesque);
+  font-size: 0.65vw;
+  color: #FFF;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* =========================================================================
+   ASYMMETRIC GRIDS & UTILITIES
+   ========================================================================= */
+.grid-asymmetric {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 2cqw;
+  width: 100%;
+}
+
+.off-grid-img {
+  position: absolute;
+  object-fit: cover;
+  will-change: transform;
+}
+
+.pad-massive {
+  padding: 12cqh 8cqw;
+}
+
+/* =========================================================================
+   LOADER — the monogram constructs itself once per session, then lifts.
+   ========================================================================= */
+
+.loader {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: var(--limestone);
+}
+
+.loader__mono {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2vh;
+}
+
+.loader__wordmark {
+  font-family: var(--serif);
+  font-size: 2.2vw;
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+  color: var(--charcoal);
+  opacity: 0;
+}
+
+.loader__count {
+  position: absolute;
+  right: 4vw;
+  bottom: 4vh;
+  font-size: 0.7vw;
+  color: var(--graphite);
+  font-variant-numeric: tabular-nums;
+  opacity: 0;
+}
+
+/* already seen this session — never rendered, never flashes */
+html[data-loaded='true'] .loader {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .loader__count { font-size: 2.6vw; }
+}
+
+/* Position is reported by the charcoal top progress bar alone. */
+
+/* =========================================================================
+   DEV OVERLAYS — revealed only under [data-labels="true"] on <body>.
+   Used to draw safe-zone rectangles in prompt 2.
+   ========================================================================= */
+
+.safezone {
+  display: none;
+}
+
+body[data-labels="true"] .safezone {
+  display: block;
+  position: absolute;
+  border: 1px dashed var(--bronze);
+  pointer-events: none;
+  z-index: 50;
+}
+
+body[data-labels="true"] .safezone::after {
+  content: attr(data-name);
+  position: absolute;
+  top: 0;
+  left: 0;
+  font-family: var(--grotesque);
+  font-size: 0.8cqw;
+  letter-spacing: 0.18em;
+  color: var(--bronze);
+  padding: 0.4cqw;
+}
+
+/* =========================================================================
+   MOTION SAFETY — respected by the motion layer (prompt 5).
+   ========================================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}

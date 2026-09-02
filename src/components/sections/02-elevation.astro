@@ -1,0 +1,645 @@
+---
+import site from '../../config/site.config.js';
+
+const S = site.section;
+const { title, villas, highlightVilla, label, sublabel, levels } = S;
+const A = S.annotations;
+
+// ---------------------------------------------------------------------------
+// SITE SECTION through the coastal hillside. High ground left, sea right.
+// Chennai is on the EAST coast, so right = east: the sun RISES over the water.
+// Nine villas sit on EXCAVATED platforms cut into the slope.
+// ---------------------------------------------------------------------------
+const VB_W = 980;
+const VB_H = 470;
+
+const LEFT = 118;         // level-marker gutter
+const SHORE = 690;        // terrain meets the water
+const GROUND_Y = 340;     // sea level (+0.00)
+const CREST_Y = 92;       // high ground (+48.00)
+
+const levelRows = levels.map((t, i) => ({
+  text: t,
+  y: +(CREST_Y + ((GROUND_Y - CREST_Y) / (levels.length - 1)) * i).toFixed(2),
+}));
+
+// --- natural grade: a surveyed profile, not a smooth curve -----------------
+const gradePts = [];
+for (let i = 0; i <= 40; i++) {
+  const t = i / 40;
+  const x = LEFT - 56 + (SHORE - LEFT + 56) * t;
+  const base = CREST_Y + (GROUND_Y - CREST_Y) * Math.pow(t, 1.16);
+  const wobble = Math.sin(i * 1.31) * 2.4 + Math.cos(i * 0.77) * 1.6;
+  gradePts.push([+x.toFixed(2), +(base + wobble).toFixed(2)]);
+}
+function gradeY(x) {
+  if (x <= gradePts[0][0]) return gradePts[0][1];
+  for (let i = 0; i < gradePts.length - 1; i++) {
+    const [x1, y1] = gradePts[i];
+    const [x2, y2] = gradePts[i + 1];
+    if (x >= x1 && x <= x2) return y1 + ((y2 - y1) * (x - x1)) / (x2 - x1);
+  }
+  return GROUND_Y;
+}
+
+// --- villas, each on an excavated platform --------------------------------
+// Distribute on an even step so the platforms never collide and real gaps
+// remain between them for the planting.
+const V_START = LEFT + 6;
+const V_STEP = (SHORE - 10 - V_START) / villas;
+const villaList = Array.from({ length: villas }, (_, i) => {
+  const t = i / (villas - 1);
+  const x = V_START + V_STEP * i;
+  const w = +(36 - t * 5).toFixed(2);         // 36 -> 31, slightly smaller down-slope
+  const h = +(w / 3).toFixed(2);              // low: ~3:1 wide to tall
+  const terraceW = +(w * 0.38).toFixed(2);
+  const pad = 3;
+  // platform is cut to the grade at the SEAWARD edge -> we excavate, never fill
+  const py = +gradeY(x + w + terraceW).toFixed(2);
+  return {
+    index: i + 1,
+    x: +x.toFixed(2),
+    w,
+    h,
+    terraceW,
+    py,
+    y: +(py - h).toFixed(2),                  // body sits ON the platform
+    x0: +(x - pad).toFixed(2),                // platform back (uphill) edge
+    x1: +(x + w + terraceW + pad).toFixed(2), // platform front (seaward) edge
+    overhang: +(w * 0.3).toFixed(2),
+    mullions: Array.from({ length: 6 }, (_, m) => +(x + (w / 6) * (m + 0.5)).toFixed(2)),
+    cutTop: +gradeY(x - pad).toFixed(2),      // grade at the back = top of the cut
+  };
+});
+const hero = villaList[highlightVilla - 1];
+
+// --- stepped terrain: grade -> cut down -> level platform -> grade --------
+const terrainSeq = [];
+let cursor = gradePts[0][0];
+villaList.forEach((v) => {
+  for (const [gx, gy] of gradePts) {
+    if (gx > cursor && gx < v.x0) terrainSeq.push([gx, +gy.toFixed(2)]);
+  }
+  terrainSeq.push([v.x0, +v.cutTop.toFixed(2)]); // arrive at the cut
+  terrainSeq.push([v.x0, v.py]);                 // drop down the retaining face
+  terrainSeq.push([v.x1, v.py]);                 // level platform
+  cursor = v.x1;
+});
+for (const [gx, gy] of gradePts) {
+  if (gx > cursor) terrainSeq.push([gx, +gy.toFixed(2)]);
+}
+terrainSeq.push([SHORE, GROUND_Y]);
+const terrainD = 'M ' + terrainSeq.map((p) => p.join(' ')).join(' L ');
+
+// terrain height for the level leaders (uses the STEPPED profile)
+function terrainAt(x) {
+  for (let i = 0; i < terrainSeq.length - 1; i++) {
+    const [x1, y1] = terrainSeq[i];
+    const [x2, y2] = terrainSeq[i + 1];
+    if (x >= x1 && x <= x2 && x2 !== x1) return y1 + ((y2 - y1) * (x - x1)) / (x2 - x1);
+  }
+  return GROUND_Y;
+}
+// first x (scanning right) where the terrain reaches this elevation
+function terrainMeets(y) {
+  for (let x = LEFT - 50; x < SHORE; x += 1.5) {
+    if (terrainAt(x) >= y) return +x.toFixed(2);
+  }
+  return SHORE;
+}
+
+// --- cut-ground hatch, clipped to below the terrain ----------------------
+// A cut is INDICATED, not filled. Short strokes hugging the terrain, with
+// length and weight varying so the field never reads as a flat grey tone,
+// and never drawn across a villa body.
+const hatch = [];
+for (let x = LEFT - 40; x < SHORE + 2; x += 9.5) {
+  const top = terrainAt(x) + 2.5;
+  const insideVilla = villaList.some((v) => x > v.x - 2 && x < v.x + v.w + 2 && top < v.py + 3);
+  if (insideVilla) continue;
+  // depth breathes along the slope instead of marching at a constant 30
+  const depth = 12 + Math.sin(x * 0.07) * 4.5 + Math.cos(x * 0.021) * 3.5;
+  const bottom = Math.min(top + depth, VB_H - 96);
+  if (bottom <= top) continue;
+  hatch.push({
+    x1: +x.toFixed(2),
+    y1: +top.toFixed(2),
+    x2: +(x - depth * 0.62).toFixed(2),
+    y2: +bottom.toFixed(2),
+    o: +(0.3 + Math.sin(x * 0.13) * 0.08).toFixed(3),
+  });
+}
+
+// --- sea: waterline + six hairlines at increasing spacing ----------------
+const waterY = GROUND_Y;
+let acc = 0;
+const seaLines = Array.from({ length: 6 }, (_, i) => {
+  acc += 7 + i * 3.4;                                   // spacing increases
+  return {
+    y: +(waterY + acc).toFixed(2),
+    x1: +(SHORE + 14 + i * 16).toFixed(2),
+    x2: VB_W - 18,
+    o: +(0.4 - i * 0.064).toFixed(3),                   // 40% -> 8%
+  };
+});
+
+// --- three coastal pines, placed in the GAPS between platforms -----------
+// candidates: the open crest before the first platform, every inter-platform
+// gap, and the shore strip after the last. Pick one from each THIRD of the
+// slope so they distribute rather than clustering at the widest gaps.
+const gaps = [];
+gaps.push({ mid: (LEFT - 44 + villaList[0].x0) / 2, span: villaList[0].x0 - (LEFT - 44) });
+for (let i = 0; i < villaList.length - 1; i++) {
+  const a = villaList[i].x1;
+  const b = villaList[i + 1].x0;
+  if (b - a > 4) gaps.push({ mid: (a + b) / 2, span: b - a });
+}
+const lastV = villaList[villaList.length - 1];
+gaps.push({ mid: (lastV.x1 + SHORE) / 2, span: SHORE - lastV.x1 });
+// split gaps into three zones (left third, middle third, right third of slope)
+// and pick the widest gap from each zone
+const slopeMin = LEFT - 44;
+const slopeMax = SHORE;
+const slopeThird = (slopeMax - slopeMin) / 3;
+const zones = [[], [], []];
+gaps.forEach((g) => {
+  const zi = Math.min(2, Math.floor((g.mid - slopeMin) / slopeThird));
+  zones[zi].push(g);
+});
+const pineSpots = zones
+  .map((z) => z.sort((a, b) => b.span - a.span)[0])
+  .filter(Boolean)
+  .slice(0, 3)
+  .sort((a, b) => a.mid - b.mid);
+const pineScales = [1.0, 0.72, 0.9];
+function pine(px, s) {
+  const gy = terrainAt(px);
+  const trunk = 46 * s;
+  const top = gy - trunk;
+  const n = (v) => +v.toFixed(2);
+  return {
+    trunk: `M ${n(px)} ${n(gy)} L ${n(px - 2 * s)} ${n(top)}`,
+    canopy:
+      `M ${n(px - 34 * s)} ${n(top + 7 * s)} ` +
+      `C ${n(px - 24 * s)} ${n(top - 8 * s)} ${n(px - 7 * s)} ${n(top - 11 * s)} ${n(px + 5 * s)} ${n(top - 6 * s)} ` +
+      `C ${n(px + 20 * s)} ${n(top - 10 * s)} ${n(px + 32 * s)} ${n(top - 1 * s)} ${n(px + 38 * s)} ${n(top + 8 * s)}`,
+    branch: `M ${n(px - 19 * s)} ${n(top + 5 * s)} L ${n(px + 23 * s)} ${n(top + 2 * s)}`,
+  };
+}
+const pineShapes = pineSpots.map((g, i) => pine(g.mid, pineScales[i]));
+
+// --- sun path: springs from the RIGHT (sea/east), arcs over the site -----
+// A clear cubic arc: starts at the sea horizon (right, GROUND_Y), peaks high
+// above the site, descends to the left. The glyph sits ON the arc at its
+// right end, adjacent to the label.
+const sunStartX = SHORE + 20;
+// clear of the waterline: the MEAN SEA LEVEL annotation sits at GROUND_Y - 9,
+// and a sun that has risen reads correctly above the horizon rather than on it
+const sunStartY = GROUND_Y - 52;
+const sunEndX = LEFT - 30;
+const sunEndY = CREST_Y - 10;
+const sunPeakY = 30;
+const sunArcD = `M ${sunStartX} ${sunStartY} C ${sunStartX - 60} ${sunPeakY - 30} ${sunEndX + 120} ${sunPeakY - 40} ${sunEndX} ${sunEndY}`;
+// Sun glyph sits at the START of the arc (sea/right end)
+const sunGlyph = { cx: sunStartX, cy: sunStartY, r: 7 };
+
+// --- annotation anchors ---------------------------------------------------
+// point at a genuinely un-excavated stretch, before the first platform
+const gradeAnnoX = +((LEFT - 40 + villaList[0].x0) / 2).toFixed(2);
+const gradeAnnoY = +gradeY(gradeAnnoX).toFixed(2);
+const gradeTextX = LEFT + 150;
+const gradeTextY = CREST_Y - 26;
+const retainV = villaList[2];
+
+// title block, lower left
+const TB_X = LEFT - 56;
+const TB_Y = VB_H - 92;
+const TB_W = 200;
+const TB_ROW = 15;
+
+// scale bar, beneath the drawing
+const SB_X = TB_X + 250;
+const SB_Y = VB_H - 40;
+const SB_SEG = 34;
+
+// section markers A–A at each end
+const markL = { x: LEFT - 50, y: CREST_Y - 44 };
+const markR = { x: VB_W - 30, y: CREST_Y - 44 };
+---
+
+<section class="section sitesection" id="elevation">
+  <!-- composition: heading fills the upper-right void -->
+  <header class="sitesection__head">
+    <h2 class="sitesection__title">{title}</h2>
+    <p class="t-label sitesection__summary">{A.summary}</p>
+  </header>
+
+  <div class="sitesection__stage">
+    <svg
+      class="sitesvg"
+      viewBox={`0 0 ${VB_W} ${VB_H}`}
+      preserveAspectRatio="xMidYMid meet"
+    >
+      <!-- 0.5px · cut-ground hatch -->
+      <g class="ss-hatch">
+        {hatch.map((h) => <line x1={h.x1} y1={h.y1} x2={h.x2} y2={h.y2} style={`opacity:${h.o}`} />)}
+      </g>
+
+      <!-- 1.5px · stepped terrain (never crosses a villa body) -->
+      <path class="ss-terrain" d={terrainD} />
+
+      <!-- 1px · retaining wall at the back of each platform -->
+      <g class="ss-retaining">
+        {villaList.map((v) => (
+          <line x1={v.x0} y1={v.cutTop} x2={v.x0} y2={v.py} />
+        ))}
+      </g>
+
+      <!-- sea -->
+      <g class="ss-sea">
+        <line class="ss-waterline" x1={SHORE - 6} y1={waterY} x2={VB_W - 18} y2={waterY} />
+        {seaLines.map((s) => (
+          <line class="ss-water" x1={s.x1} y1={s.y} x2={s.x2} y2={s.y} style={`opacity:${s.o}`} />
+        ))}
+      </g>
+
+      <!-- villas. The hero is DRAWN like the rest, then highlighted. -->
+      {villaList.map((v) => (
+        <g
+          class="ss-villa"
+          class:list={[{ 'ss-villa--hero': v.index === highlightVilla }]}
+          data-villa={v.index}
+        >
+          {v.index === highlightVilla && (
+            <rect class="ss-heroFill" x={v.x} y={v.y} width={v.w} height={v.h} />
+          )}
+          <rect class="ss-body" x={v.x} y={v.y} width={v.w} height={v.h} />
+          <line class="ss-terrace" x1={v.x + v.w} y1={v.py} x2={v.x + v.w + v.terraceW} y2={v.py} />
+          <line
+            class="ss-terrace"
+            x1={v.x + v.w + v.terraceW}
+            y1={v.py}
+            x2={v.x + v.w + v.terraceW}
+            y2={v.py - 5}
+          />
+          <g class="ss-mullions">
+            {v.mullions.map((mx) => <line x1={mx} y1={v.y + 3} x2={mx} y2={v.py} />)}
+          </g>
+          <line class="ss-roof" x1={v.x - 6} y1={v.y} x2={v.x + v.w + v.overhang} y2={v.y} />
+          <!-- invisible hit area. Extends DOWN over the platform (empty
+               ground) so a tap clears 44px without colliding with the villa
+               up-slope, which sits back and to the left. -->
+          <rect
+            class="ss-hit"
+            x={v.x - 10}
+            y={v.y - 14}
+            width={v.w + v.terraceW + 20}
+            height={v.h + 34}
+          />
+        </g>
+      ))}
+
+      <!-- 0.5px · level markers, each leader running to the terrain -->
+      <g class="ss-levels">
+        {levelRows.map((l, i) => (
+          <g class="ss-level" data-level-index={i}>
+            <line class="ss-tick" x1={LEFT - 52} y1={l.y} x2={LEFT - 42} y2={l.y} />
+            <line class="ss-leader" x1={LEFT - 40} y1={l.y} x2={terrainMeets(l.y)} y2={l.y} />
+            <line
+              class="ss-endtick"
+              x1={terrainMeets(l.y)}
+              y1={l.y - 3}
+              x2={terrainMeets(l.y)}
+              y2={l.y + 3}
+            />
+            <text class="ss-levText" x={6} y={l.y + 3} text-anchor="start">{l.text}</text>
+          </g>
+        ))}
+      </g>
+
+      <!-- trees -->
+      <g class="ss-pines">
+        {pineShapes.map((p) => (
+          <g class="ss-pine">
+            <path class="ss-pine-trunk" d={p.trunk} />
+            <path class="ss-pine-canopy" d={p.canopy} />
+            <path class="ss-pine-branch" d={p.branch} />
+          </g>
+        ))}
+      </g>
+
+      <!-- ===================== ANNOTATION LAYER ===================== -->
+      <g class="ss-anno" data-anno>
+        <!-- sun path: springs from the RIGHT (east / sea) -->
+        <g class="ss-annoItem">
+          <path class="ss-sunArc" d={sunArcD} />
+          <circle class="ss-sunGlyph" cx={sunGlyph.cx} cy={sunGlyph.cy} r={sunGlyph.r} />
+          <text class="ss-annoText" x={sunGlyph.cx + 16} y={sunGlyph.cy + 4}>{A.sunPath}</text>
+        </g>
+
+        <!-- natural grade -->
+        <g class="ss-annoItem">
+          <line class="ss-annoLead" x1={gradeTextX - 4} y1={gradeTextY + 4} x2={gradeAnnoX} y2={gradeAnnoY - 2} />
+          <circle class="ss-annoDot" cx={gradeAnnoX} cy={gradeAnnoY - 2} r="1.8" />
+          <text class="ss-annoText" x={gradeTextX} y={gradeTextY} text-anchor="start">{A.naturalGrade}</text>
+        </g>
+
+        <!-- retaining terrace -->
+        <g class="ss-annoItem">
+          <line
+            class="ss-annoLead"
+            x1={retainV.x0 - 92}
+            y1={retainV.py + 62}
+            x2={retainV.x0 - 1}
+            y2={(retainV.cutTop + retainV.py) / 2}
+          />
+          <circle class="ss-annoDot" cx={retainV.x0 - 1} cy={(retainV.cutTop + retainV.py) / 2} r="1.8" />
+          <text class="ss-annoText" x={retainV.x0 - 96} y={retainV.py + 66} text-anchor="start">{A.retaining}</text>
+        </g>
+
+        <!-- mean sea level -->
+        <g class="ss-annoItem">
+          <text class="ss-annoText" x={SHORE + 12} y={waterY - 9} text-anchor="start">{A.meanSea}</text>
+        </g>
+
+        <!-- BAY OF BENGAL, right end of the waterline -->
+        <g class="ss-annoItem">
+          <text class="ss-annoText ss-annoSea" x={VB_W - 18} y={waterY - 9} text-anchor="end">{A.sea}</text>
+        </g>
+
+        <!-- section markers A–A -->
+        {[markL, markR].map((m, i) => (
+          <g class="ss-annoItem ss-sectionMark">
+            <line class="ss-annoLead" x1={m.x} y1={m.y + 10} x2={m.x} y2={m.y + 54} />
+            <circle class="ss-markCircle" cx={m.x} cy={m.y} r="9" />
+            <text class="ss-markText" x={m.x} y={m.y + 3.4} text-anchor="middle">{A.sectionMark}</text>
+            <path
+              class="ss-markTri"
+              d={i === 0
+                ? `M ${m.x + 9} ${m.y - 5} L ${m.x + 19} ${m.y} L ${m.x + 9} ${m.y + 5} Z`
+                : `M ${m.x - 9} ${m.y - 5} L ${m.x - 19} ${m.y} L ${m.x - 9} ${m.y + 5} Z`}
+            />
+          </g>
+        ))}
+
+        <!-- title block -->
+        <g class="ss-annoItem ss-titleBlock">
+          <rect class="ss-tbBox" x={TB_X} y={TB_Y} width={TB_W} height={TB_ROW * S.titleBlock.length} />
+          {S.titleBlock.map((row, i) => (
+            <>
+              {i > 0 && (
+                <line class="ss-tbRule" x1={TB_X} y1={TB_Y + TB_ROW * i} x2={TB_X + TB_W} y2={TB_Y + TB_ROW * i} />
+              )}
+              <text class="ss-tbKey" x={TB_X + 8} y={TB_Y + TB_ROW * i + 10}>{row[0]}</text>
+              <text class="ss-tbVal" x={TB_X + 84} y={TB_Y + TB_ROW * i + 10}>{row[1]}</text>
+            </>
+          ))}
+          <line class="ss-tbRule" x1={TB_X + 78} y1={TB_Y} x2={TB_X + 78} y2={TB_Y + TB_ROW * S.titleBlock.length} />
+        </g>
+
+        <!-- scale bar -->
+        <g class="ss-annoItem ss-scalebar">
+          <line class="ss-sbLine" x1={SB_X} y1={SB_Y} x2={SB_X + SB_SEG * 3} y2={SB_Y} />
+          {S.scaleBar.map((t, i) => (
+            <>
+              <line class="ss-sbTick" x1={SB_X + SB_SEG * i} y1={SB_Y - 4} x2={SB_X + SB_SEG * i} y2={SB_Y + 4} />
+              <text class="ss-sbText" x={SB_X + SB_SEG * i} y={SB_Y + 15} text-anchor="middle">{t}</text>
+            </>
+          ))}
+        </g>
+      </g>
+
+      <!-- hero caption. Sits in the open ground SEAWARD of the slope so it
+           never lies over another villa; an angled leader ties it to the
+           bronze roof slab and ends in a filled dot. -->
+      <defs>
+        <clipPath id="capClip">
+          <rect
+            data-cap-clip
+            x={hero.x + hero.w + 58}
+            y={hero.y - 62}
+            width="0"
+            height="42"
+          />
+        </clipPath>
+      </defs>
+      <line
+        class="ss-heroLeader"
+        data-hero-leader
+        x1={hero.x + hero.w + 64}
+        y1={hero.y - 40}
+        x2={hero.x + hero.w * 0.62}
+        y2={hero.y}
+      />
+      <circle class="ss-heroDot" data-hero-dot cx={hero.x + hero.w * 0.62} cy={hero.y} r="2.2" />
+      <g class="ss-caption" data-ss-caption clip-path="url(#capClip)">
+        <text class="ss-capLabel" x={hero.x + hero.w + 70} y={hero.y - 44} text-anchor="start">{label}</text>
+        <text class="ss-capSub" x={hero.x + hero.w + 70} y={hero.y - 32} text-anchor="start">{sublabel}</text>
+      </g>
+
+      <!-- hover annotation, positioned by the motion layer -->
+      <g class="ss-hover" data-villa-anno opacity="0">
+        <line class="ss-annoLead" data-va-lead />
+        <circle class="ss-annoDot" data-va-dot r="1.8" />
+        <text class="ss-vaName" data-va-name />
+        <text class="ss-vaLevel" data-va-level />
+        <text class="ss-vaMeta" data-va-meta />
+      </g>
+    </svg>
+  </div>
+</section>
+
+<style>
+  .sitesection { background: var(--limestone); }
+
+  /* --- composition: heading fills the upper-right void --- */
+  .sitesection__head {
+    position: absolute;
+    right: 6cqw;
+    top: 13cqh;
+    text-align: right;
+    z-index: 2;
+  }
+  .sitesection__title {
+    font-family: var(--serif);
+    font-size: 3cqw;
+    line-height: 1;
+    letter-spacing: -0.01em;
+    font-weight: 500;
+    color: var(--charcoal);
+    margin: 0;
+  }
+  .sitesection__summary {
+    font-size: 0.72cqw;
+    color: var(--graphite);
+    opacity: 0.6;
+    margin-top: 1.4cqh;
+  }
+
+  .sitesection__stage {
+    position: absolute;
+    inset: 15cqh 4cqw 6cqh 4cqw;
+  }
+  .sitesvg {
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+  }
+
+  .sitesvg :global(line),
+  .sitesvg :global(path),
+  .sitesvg :global(rect),
+  .sitesvg :global(circle) {
+    fill: none;
+    vector-effect: non-scaling-stroke;
+  }
+
+  /* ---- FOUR LINE WEIGHTS ------------------------------------------- */
+  /* 2px — terrain, roof slabs, ground line */
+  .sitesvg :global(.ss-terrain),
+  .sitesvg :global(.ss-roof) {
+    stroke: rgba(28, 27, 24, 0.85);
+    stroke-width: 2;
+  }
+  /* 1.25px — villa outlines, terrace edges, retaining walls, waterline */
+  .sitesvg :global(.ss-body),
+  .sitesvg :global(.ss-terrace),
+  .sitesvg :global(.ss-retaining line) { stroke: rgba(28, 27, 24, 0.65); stroke-width: 1.25; }
+  .sitesvg :global(.ss-waterline) { stroke: rgba(28, 27, 24, 0.65); stroke-width: 1.25; }
+  /* 1px — mullions, waterlines */
+  .sitesvg :global(.ss-mullions line),
+  .sitesvg :global(.ss-water) { stroke: rgba(28, 27, 24, 0.45); stroke-width: 1; }
+  .sitesvg :global(.ss-water) { stroke: var(--charcoal); }
+  /* 0.75px — hatch, leaders, ticks */
+  .sitesvg :global(.ss-leader),
+  .sitesvg :global(.ss-tick),
+  .sitesvg :global(.ss-endtick),
+  .sitesvg :global(.ss-annoLead) {
+    stroke: rgba(28, 27, 24, 0.3);
+    stroke-width: 0.75;
+  }
+
+  /* cut hatch — light, varied, never a flat tone */
+  .sitesvg :global(.ss-hatch line) {
+    stroke: rgba(28, 27, 24, 0.3);
+    stroke-width: 0.75;
+  }
+
+  /* pines — clear, not ghosts */
+  .sitesvg :global(.ss-pine-trunk) { stroke: rgba(28, 27, 24, 0.55); stroke-width: 1; }
+  .sitesvg :global(.ss-pine-canopy),
+  .sitesvg :global(.ss-pine-branch) { stroke: rgba(28, 27, 24, 0.55); stroke-width: 0.75; }
+
+  /* the headland villa — highlighted, not replaced */
+  .sitesvg :global(.ss-villa--hero .ss-body),
+  .sitesvg :global(.ss-villa--hero .ss-terrace) { stroke: var(--bronze); stroke-width: 1; }
+  .sitesvg :global(.ss-villa--hero .ss-roof) { stroke: var(--bronze); stroke-width: 1.5; }
+  .sitesvg :global(.ss-villa--hero .ss-mullions line) { stroke: var(--bronze); stroke-width: 0.75; }
+  .sitesvg :global(.ss-heroFill) { fill: var(--bronze); fill-opacity: 0.08; stroke: none; }
+  .sitesvg :global(.ss-heroLeader) { stroke: var(--bronze); stroke-width: 0.5; }
+  .sitesvg :global(.ss-heroDot) { fill: var(--bronze); stroke: none; }
+
+  /* invisible hit area */
+  .sitesvg :global(.ss-hit) { fill: transparent; stroke: none; }
+
+  /* --- hover focus: the villa sharpens to full-weight charcoal --- */
+  .sitesvg :global(.ss-villa .ss-roof),
+  .sitesvg :global(.ss-villa .ss-body),
+  .sitesvg :global(.ss-villa .ss-terrace),
+  .sitesvg :global(.ss-villa .ss-mullions line) {
+    transition: stroke 0.25s ease;
+  }
+  .sitesvg :global(.ss-villa.is-focus .ss-body),
+  .sitesvg :global(.ss-villa.is-focus .ss-terrace),
+  .sitesvg :global(.ss-villa.is-focus .ss-roof),
+  .sitesvg :global(.ss-villa.is-focus .ss-mullions line) {
+    stroke: var(--charcoal);
+  }
+  /* the hero keeps its bronze even when another villa is focused */
+  .sitesvg :global(.ss-villa--hero.is-focus .ss-body),
+  .sitesvg :global(.ss-villa--hero.is-focus .ss-terrace),
+  .sitesvg :global(.ss-villa--hero.is-focus .ss-roof),
+  .sitesvg :global(.ss-villa--hero.is-focus .ss-mullions line) {
+    stroke: var(--bronze);
+  }
+
+  /* the matching level marker goes bronze */
+  .sitesvg :global(.ss-level .ss-levText),
+  .sitesvg :global(.ss-level line) { transition: stroke 0.25s ease, fill 0.25s ease; }
+  .sitesvg :global(.ss-level.is-bronze .ss-levText) { fill: var(--bronze); fill-opacity: 1; }
+  .sitesvg :global(.ss-level.is-bronze line) { stroke: var(--bronze); }
+
+  /* ---- annotation type ---- */
+  .sitesvg :global(text) {
+    stroke: none;
+    font-family: var(--grotesque);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    font-variant-numeric: tabular-nums;
+  }
+  .sitesvg :global(.ss-levText) { fill: var(--graphite); fill-opacity: 0.75; font-size: 9.5px; }
+  .sitesvg :global(.ss-annoText) { fill: var(--graphite); fill-opacity: 0.7; font-size: 8.5px; }
+  .sitesvg :global(.ss-annoDot) { fill: rgba(28, 27, 24, 0.4); stroke: none; }
+  .sitesvg :global(.ss-capLabel) { fill: var(--bronze); font-size: 11px; }
+  .sitesvg :global(.ss-capSub) { fill: var(--graphite); font-size: 8.5px; }
+
+  /* sun path */
+  .sitesvg :global(.ss-sunArc) {
+    stroke: rgba(28, 27, 24, 0.3);
+    stroke-width: 0.75;
+    stroke-dasharray: 2 5;
+  }
+  .sitesvg :global(.ss-sunGlyph) { stroke: rgba(28, 27, 24, 0.4); stroke-width: 1; }
+
+  /* section markers */
+  .sitesvg :global(.ss-markCircle) { stroke: rgba(28, 27, 24, 0.5); stroke-width: 1; }
+  .sitesvg :global(.ss-markTri) { fill: rgba(28, 27, 24, 0.55); stroke: none; }
+  .sitesvg :global(.ss-markText) { fill: var(--graphite); fill-opacity: 0.8; font-size: 9px; letter-spacing: 0; }
+
+  /* title block + scale bar */
+  .sitesvg :global(.ss-tbBox),
+  .sitesvg :global(.ss-tbRule),
+  .sitesvg :global(.ss-sbLine),
+  .sitesvg :global(.ss-sbTick) { stroke: rgba(28, 27, 24, 0.3); stroke-width: 0.75; }
+  .sitesvg :global(.ss-tbKey) { fill: var(--graphite); fill-opacity: 0.7; font-size: 7.5px; }
+  .sitesvg :global(.ss-tbVal) { fill: var(--charcoal); fill-opacity: 0.75; font-size: 7.5px; }
+  .sitesvg :global(.ss-sbText) { fill: var(--graphite); fill-opacity: 0.7; font-size: 7.5px; }
+
+  /* hover annotation */
+  .sitesvg :global(.ss-vaName) { fill: var(--charcoal); font-size: 9.5px; }
+  .sitesvg :global(.ss-vaLevel) { fill: var(--bronze); font-size: 8.5px; }
+  .sitesvg :global(.ss-vaMeta) { fill: var(--graphite); fill-opacity: 0.7; font-size: 7.5px; }
+
+  @media (max-width: 768px) {
+    .sitesection__head { right: 7cqw; top: 9cqh; }
+    .sitesection__title { font-size: 7cqw; }
+    .sitesection__summary { font-size: 2.9cqw; }
+
+    /* The section is 2.09:1. Fitting that to 390px renders every annotation
+       at ~3px. Instead the drawing keeps a legible scale and pans
+       horizontally — how a section sheet is actually read on a phone. */
+    .sitesection__stage {
+      inset: 24cqh 0 14cqh 0;
+      overflow-x: auto;
+      overflow-y: hidden;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+    .sitesection__stage::-webkit-scrollbar { display: none; }
+    .sitesvg {
+      width: 260%;
+      height: 100%;
+      min-width: 260%;
+    }
+
+    /* annotation type raised so it lands ~11-13px on screen at that scale */
+    .sitesvg :global(.ss-levText) { font-size: 13.3px; }
+    .sitesvg :global(.ss-annoText) { font-size: 11.9px; }
+    .sitesvg :global(.ss-capLabel) { font-size: 15px; }
+    .sitesvg :global(.ss-capSub) { font-size: 11.9px; }
+    .sitesvg :global(.ss-markText) { font-size: 12px; }
+    .sitesvg :global(.ss-tbKey),
+    .sitesvg :global(.ss-tbVal) { font-size: 10.5px; }
+    .sitesvg :global(.ss-sbText) { font-size: 10.5px; }
+  }
+</style>

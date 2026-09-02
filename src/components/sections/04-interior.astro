@@ -1,0 +1,23 @@
+---
+import site from '../../config/site.config.js';
+
+// Safe zone: the top strip reserved for the nav — it must stay dark and
+// quiet. No body copy in this section; this is the only reserved region.
+const sz = { top: 0, left: 0, width: 100, height: 13 };
+---
+
+<section class="section section--bleed interior" id="interior" data-bleed>
+  <img class="frame interior__img" src={`/frames/${site.frames.interior}`} alt="" />
+
+  <div
+    class="safezone"
+    data-name="NAV STRIP"
+    style={`top:${sz.top}cqh;left:${sz.left}cqw;width:${sz.width}cqw;height:${sz.height}cqh;`}
+  ></div>
+</section>
+
+<style>
+  .interior {
+    background: var(--charcoal);
+  }
+</style>

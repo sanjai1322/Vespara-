@@ -1,0 +1,59 @@
+---
+// VESPERA monogram — a "V" constructed the way the elevation is: two straight
+// strokes meeting at a precise point, crossed by a level line the way an
+// architectural drawing marks a level. Not a typeface glyph.
+// `size` is applied inline: a parent's scoped class cannot reach a child
+// component's root element, so sizing must not rely on the caller's CSS.
+const { color = 'var(--charcoal)', size = '2cqw', class: className = '' } = Astro.props;
+
+// invisible square viewBox with real margin
+const S = 100;
+const m = 22;          // margin
+const apexY = S - m;   // the precise meeting point
+const crossY = m + (apexY - m) * 0.6; // crossbar at ~40% height from apex
+
+// where each stroke sits at crossbar height, so the rule can overhang it
+const t = (crossY - m) / (apexY - m);
+const leftAtCross = m + (S / 2 - m) * t;
+const rightAtCross = S - m - (S / 2 - m) * t;
+const over = 6; // crossbar extends slightly beyond both strokes
+---
+
+<svg
+  class={`monogram ${className}`}
+  viewBox={`0 0 ${S} ${S}`}
+  preserveAspectRatio="xMidYMid meet"
+  style={`--mono-color:${color};width:${size};height:${size};flex:none`}
+  aria-hidden="true"
+>
+  <line class="mono-stroke" x1={m} y1={m} x2={S / 2} y2={apexY} />
+  <line class="mono-stroke" x1={S - m} y1={m} x2={S / 2} y2={apexY} />
+  <line
+    class="mono-crossbar"
+    x1={leftAtCross - over}
+    y1={crossY}
+    x2={rightAtCross + over}
+    y2={crossY}
+  />
+</svg>
+
+<style>
+  .monogram {
+    display: block;
+    overflow: visible;
+  }
+  /* :global — keeps the strokes styled even when queried/animated by JS */
+  .monogram :global(.mono-stroke) {
+    stroke: var(--mono-color);
+    stroke-width: 1.5;
+    fill: none;
+    vector-effect: non-scaling-stroke;
+  }
+  .monogram :global(.mono-crossbar) {
+    stroke: var(--mono-color);
+    stroke-width: 1;
+    opacity: 0.45;
+    fill: none;
+    vector-effect: non-scaling-stroke;
+  }
+</style>

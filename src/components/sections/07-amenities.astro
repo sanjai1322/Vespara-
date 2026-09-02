@@ -1,0 +1,223 @@
+---
+import site from '../../config/site.config.js';
+---
+
+<section class="section amenities" id="amenities">
+  <!-- section head, upper left, on the same 12-column grid as the plates -->
+  <header class="amenities__head">
+    <p class="t-label amenities__title">{site.amenitiesTitle}</p>
+    <span class="amenities__titleRule" data-amenities-rule></span>
+    <p class="amenities__count">{String(site.amenities.length).padStart(2, '0')}</p>
+  </header>
+
+  <div class="amenities__grid">
+    {site.amenities.map((a, i) => (
+      <figure class={`amenity amenity--${i + 1}`} data-amenity>
+        <div class="amenity__imgwrap" style={`aspect-ratio:${a.ratio}`}>
+          <img class="amenity__img" src={`/frames/${a.frame}`} alt="" loading="lazy" decoding="async" />
+        </div>
+        <div class="amenity__caption">
+          <span class="amenity__index">{String(i + 1).padStart(2, '0')}</span>
+          <div class="amenity__text">
+            <figcaption class="t-label amenity__label">{a.label}</figcaption>
+            <p class="amenity__detail" data-amenity-detail>{a.detail}</p>
+          </div>
+        </div>
+      </figure>
+    ))}
+  </div>
+
+  <!-- DRAWING TITLE BLOCK — lower right, matching section 02's convention -->
+  <div class="amenities__titleblock" data-amenities-titleblock>
+    <div class="atb__row">
+      <span class="atb__key">PROJECT</span>
+      <span class="atb__val">VESPERA</span>
+    </div>
+    <div class="atb__row">
+      <span class="atb__key">DRAWING</span>
+      <span class="atb__val">AMENITIES — SCHEDULE</span>
+    </div>
+    <div class="atb__row">
+      <span class="atb__key">SCALE</span>
+      <span class="atb__val">NTS</span>
+    </div>
+    <div class="atb__row">
+      <span class="atb__key">REVISION</span>
+      <span class="atb__val">C</span>
+    </div>
+  </div>
+</section>
+
+<style>
+  /* The section is a normal-flow block, not an absolutely positioned stage:
+     its height follows the grid instead of a hardcoded 160vh that the content
+     had to be nudged around with negative margins. */
+  .amenities {
+    background: var(--limestone);
+    height: auto;
+    container-type: inline-size;
+    padding: 14cqh 8cqw 8cqh;
+    overflow: visible;
+  }
+
+  .amenities__head {
+    display: flex;
+    align-items: baseline;
+    gap: 1.6cqw;
+    margin-bottom: 9cqh;
+  }
+  .amenities__title {
+    font-size: 0.8cqw;
+    color: var(--charcoal);
+  }
+  .amenities__titleRule {
+    flex: 1;
+    height: 1px;
+    background: var(--hairline);
+    transform-origin: left center;
+  }
+  .amenities__count {
+    font-family: var(--grotesque);
+    font-size: 0.7cqw;
+    letter-spacing: 0.18em;
+    color: var(--graphite);
+    opacity: 0.55;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Twelve columns. Every plate is placed on real column lines, so the
+     stagger is composed rather than produced by arbitrary padding. */
+  .amenities__grid {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    column-gap: 2cqw;
+    row-gap: 0;
+  }
+
+  .amenity {
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Every plate is landscape, so the rhythm comes from SPAN rather than from
+     shape: each row carries one large plate and one small one, and the pair
+     swaps sides between rows. Row 2 keeps enough clearance that a plate can
+     never ride up into the caption of the plate above it. */
+  .amenity--1 { grid-column: 1 / span 7;  grid-row: 1; }
+  .amenity--2 { grid-column: 9 / span 4;  grid-row: 1; margin-top: 10cqh; }
+  .amenity--3 { grid-column: 1 / span 4;  grid-row: 2; margin-top: 12cqh; }
+  .amenity--4 { grid-column: 6 / span 7;  grid-row: 2; margin-top: 3cqh; }
+
+  .amenity__imgwrap {
+    position: relative;
+    width: 100%;
+    overflow: hidden;
+    background: var(--sand);
+  }
+  /* not .frame: these are in-flow plates, not full-bleed stage frames */
+  .amenity__img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    will-change: transform;
+  }
+
+  .amenity__caption {
+    display: flex;
+    align-items: flex-start;
+    gap: 1cqw;
+    margin-top: 1.8cqh;
+    padding-top: 1.4cqh;
+    border-top: 1px solid var(--hairline);
+  }
+  .amenity__index {
+    font-family: var(--grotesque);
+    font-size: 0.62cqw;
+    letter-spacing: 0.14em;
+    color: var(--graphite);
+    opacity: 0.5;
+    font-variant-numeric: tabular-nums;
+    padding-top: 0.15cqh;
+  }
+  .amenity__text { flex: 1; }
+  .amenity__label {
+    color: var(--charcoal);
+    font-size: 0.82cqw;
+    margin-bottom: 0.9cqh;
+  }
+  .amenity__detail {
+    font-family: var(--grotesque);
+    font-size: 0.62cqw;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--graphite);
+    opacity: 0.6;
+    line-height: 1.7;
+    margin: 0;
+  }
+
+  /* --- TITLE BLOCK --- */
+  .amenities__titleblock {
+    margin: 6cqh 0 0 auto;
+    width: 24cqw;
+    border: 1px solid rgba(28, 27, 24, 0.18);
+    pointer-events: none;
+  }
+  .atb__row {
+    display: flex;
+    border-bottom: 1px solid rgba(28, 27, 24, 0.12);
+    font-family: var(--grotesque);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+  }
+  .atb__row:last-child { border-bottom: none; }
+  .atb__key {
+    width: 32%;
+    padding: 0.7cqh 0.6cqw;
+    font-size: 0.55cqw;
+    color: var(--graphite);
+    opacity: 0.5;
+  }
+  .atb__val {
+    width: 68%;
+    white-space: nowrap;
+    padding: 0.7cqh 0.6cqw;
+    font-size: 0.55cqw;
+    color: var(--charcoal);
+    opacity: 0.75;
+    border-left: 1px solid rgba(28, 27, 24, 0.12);
+  }
+
+  /* --- mobile: a single legible column, no stagger to fight --- */
+  @media (max-width: 768px) {
+    .amenities { padding: 16cqw 7cqw 14cqw; }
+    .amenities__head { gap: 3cqw; margin-bottom: 8cqw; }
+    .amenities__title { font-size: 2.8cqw; }
+    .amenities__count { font-size: 2.4cqw; }
+
+    .amenities__grid {
+      grid-template-columns: 1fr;
+      row-gap: 9cqw;
+    }
+    .amenity--1, .amenity--2, .amenity--3, .amenity--4 {
+      grid-column: 1;
+      grid-row: auto;
+      margin-top: 0;
+    }
+    /* every plate reads at one shape on a phone — the editorial stagger is a
+       desktop device and just produces ragged rhythm in a single column */
+    .amenity__imgwrap { aspect-ratio: 3 / 2 !important; }
+
+    .amenity__caption { gap: 3cqw; margin-top: 3.5cqw; padding-top: 3cqw; }
+    .amenity__index { font-size: 2.4cqw; }
+    .amenity__label { font-size: 3.2cqw; letter-spacing: 0.16em; margin-bottom: 2cqw; }
+    .amenity__detail { font-size: 2.5cqw; line-height: 1.6; }
+
+    .amenities__titleblock { display: none; }
+  }
+</style>

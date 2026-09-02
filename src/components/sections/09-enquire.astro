@@ -1,0 +1,384 @@
+---
+import site from '../../config/site.config.js';
+import Monogram from '../Monogram.astro';
+const e = site.enquire;
+---
+
+<section class="section enquire" id="enquire">
+  <!-- The section had no heading at all and opened straight onto three bare
+       inputs, which is what made it read as unfinished. It now carries the
+       same numbered head as every other section, and closes on a real
+       footer bar rather than trailing off into empty ground. -->
+  <header class="enq-head">
+    <p class="t-label enq-head__label">{e.label}</p>
+    <span class="enq-head__rule" data-enq-rule></span>
+  </header>
+
+  <div class="enq-body">
+    <div class="enq-lead">
+      <h2 class="enq-title" data-enq-title>{e.title}</h2>
+      <p class="enq-sub">{e.lead}</p>
+    </div>
+
+    <form class="enquire__form" novalidate>
+      {site.form.fields.map((field) => (
+        <div class="field">
+          <!-- the label sits AFTER the input in markup on purpose: the CSS
+               float relies on the ~ sibling combinator, which only matches
+               LATER siblings — a label before the input can never be reached
+               by :focus ~ or :not(:placeholder-shown) ~. Visual position is
+               unaffected since the label is absolutely positioned. -->
+          <input
+            class="field__input"
+            id={`f-${field.toLowerCase()}`}
+            name={field.toLowerCase()}
+            type={field === 'EMAIL' ? 'email' : field === 'TELEPHONE' ? 'tel' : 'text'}
+            autocomplete={field === 'EMAIL' ? 'email' : field === 'TELEPHONE' ? 'tel' : 'name'}
+            placeholder=" "
+          />
+          <label class="t-label field__label" for={`f-${field.toLowerCase()}`}>{field}</label>
+          <span class="field__rule" data-field-rule></span>
+        </div>
+      ))}
+
+      <button class="enquire__cta t-label" type="submit">{site.form.cta}</button>
+    </form>
+
+    <aside class="contact">
+      <p class="t-label contact__heading">{site.contact.heading}</p>
+      <address class="contact__body">
+        {site.contact.lines.map((l) => <span class="contact__line">{l}</span>)}
+      </address>
+      <p class="contact__line contact__line--sp">{site.contact.phone}</p>
+      <p class="contact__line">{site.contact.email}</p>
+      <p class="t-label contact__hours">{site.contact.hours}</p>
+    </aside>
+  </div>
+
+  <!-- FOOTER BAR -->
+  <footer class="foot">
+    <div class="foot__rule" data-foot-rule></div>
+    <div class="foot__row">
+      <div class="foot__brand">
+        <Monogram color="var(--charcoal)" size="1.5cqw" />
+        <span class="foot__word">{site.brand}</span>
+      </div>
+
+      <nav class="foot__nav" aria-label="Footer">
+        {site.nav.map((item) => (
+          <a class="foot__link" href={`#${site.navTargets[item]}`}>{item}</a>
+        ))}
+      </nav>
+
+      <p class="foot__colophon">{site.footer.colophon}</p>
+    </div>
+
+    <div class="foot__row foot__row--fine">
+      <div class="enquire__fine" data-enquire-fine>
+        {site.registrationNote.map((line) => <p class="enquire__fineline">{line}</p>)}
+      </div>
+      <div class="foot__legal">
+        {site.footer.legal.map((l) => <a class="foot__link foot__link--sm" href="#">{l}</a>)}
+        <span class="foot__copy">{site.footer.copyright}</span>
+      </div>
+    </div>
+  </footer>
+</section>
+
+<style>
+  .enquire {
+    background: var(--bone);
+    height: auto;
+    min-height: 100vh;
+    container-type: inline-size;
+    display: flex;
+    flex-direction: column;
+    padding: 12cqh 8cqw 3cqh;
+    overflow: visible;
+  }
+
+  /* --- head --- */
+  .enq-head {
+    display: flex;
+    align-items: center;
+    gap: 1.6cqw;
+    margin-bottom: 8cqh;
+  }
+  .enq-head__label { font-size: 0.8cqw; color: var(--charcoal); }
+  .enq-head__rule {
+    flex: 1;
+    height: 1px;
+    background: var(--hairline);
+    transform-origin: left center;
+  }
+
+  /* --- body: statement | form | contact, on one baseline --- */
+  .enq-body {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 1fr 0.8fr;
+    gap: 6cqw;
+    align-items: start;
+    padding-bottom: 10cqh;
+  }
+
+  .enq-title {
+    font-family: var(--serif);
+    font-size: 2.6cqw;
+    line-height: 1.2;
+    font-weight: 400;
+    letter-spacing: -0.01em;
+    color: var(--charcoal);
+    margin: 0 0 2.4cqh;
+    text-wrap: balance;
+  }
+  .enq-sub {
+    font-family: var(--grotesque);
+    font-size: 0.72cqw;
+    letter-spacing: 0.08em;
+    line-height: 1.9;
+    color: var(--graphite);
+    opacity: 0.8;
+    margin: 0;
+    max-width: 22cqw;
+  }
+
+  /* --- form --- */
+  .enquire__form { display: flex; flex-direction: column; }
+
+  .field {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 4cqh;
+  }
+  .field__label {
+    position: absolute;
+    top: 2.2cqh;
+    left: 0;
+    color: var(--graphite);
+    font-size: 0.8cqw;
+    transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+                font-size 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+                color 0.35s ease;
+    pointer-events: none;
+    transform-origin: left bottom;
+  }
+  .field__input {
+    appearance: none;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    padding: 1.4cqh 0;
+    font-family: var(--serif);
+    font-size: 1.6cqw;
+    color: var(--charcoal);
+    outline: none;
+    margin-top: 2.6cqh;
+  }
+  .field__input:focus ~ .field__label,
+  .field__input:not(:placeholder-shown) ~ .field__label {
+    transform: translateY(-2.6cqh);
+    font-size: 0.6cqw;
+    color: var(--charcoal);
+  }
+
+  .field__rule {
+    display: block;
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    height: 1px;
+    width: 100%;
+    background: var(--hairline);
+    transform-origin: left center;
+  }
+  .field__rule::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    height: 1px;
+    width: 100%;
+    background: var(--bronze);
+    transform: scaleX(0);
+    transform-origin: left center;
+    transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .field__input:focus ~ .field__rule::after { transform: scaleX(1); }
+
+  .enquire__cta {
+    margin-top: 2cqh;
+    align-self: flex-start;
+    background: var(--bronze);
+    color: var(--bone);
+    border: none;
+    border-radius: 0;
+    padding: 1.6cqh 3.4cqw;
+    font-size: 0.75cqw;
+    letter-spacing: 0.22em;
+    cursor: pointer;
+    transition: background 0.35s ease;
+  }
+  .enquire__cta:hover { background: #7a5c33; }
+
+  /* --- contact --- */
+  .contact {
+    border-left: 1px solid var(--hairline);
+    padding-left: 2.6cqw;
+  }
+  .contact__heading { color: var(--graphite); font-size: 0.72cqw; margin-bottom: 2.6cqh; }
+  .contact__body { display: flex; flex-direction: column; font-style: normal; }
+  .contact__line {
+    font-family: var(--grotesque);
+    font-size: 0.72cqw;
+    letter-spacing: 0.1em;
+    line-height: 2.1;
+    color: var(--charcoal);
+    font-variant-numeric: tabular-nums;
+  }
+  .contact__line--sp { margin-top: 2.2cqh; }
+  .contact__hours { color: var(--graphite); font-size: 0.66cqw; margin-top: 2.6cqh; }
+
+  /* --- FOOTER BAR --- */
+  .foot { margin-top: auto; }
+  .foot__rule {
+    height: 1px;
+    width: 100%;
+    background: var(--hairline);
+    transform-origin: left center;
+  }
+  .foot__row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 4cqw;
+    padding: 2.6cqh 0;
+  }
+  .foot__row--fine {
+    align-items: flex-end;
+    border-top: 1px solid var(--hairline);
+    padding-bottom: 1cqh;
+  }
+
+  .foot__brand { display: flex; align-items: center; gap: 0.9cqw; }
+  .foot__word {
+    font-family: var(--grotesque);
+    font-size: 0.78cqw;
+    letter-spacing: 0.32em;
+    color: var(--charcoal);
+  }
+
+  .foot__nav { display: flex; gap: 2.2cqw; }
+  .foot__link {
+    font-family: var(--grotesque);
+    font-size: 0.62cqw;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--graphite);
+    text-decoration: none;
+    opacity: 0.75;
+    transition: opacity 0.3s ease;
+  }
+  .foot__link:hover { opacity: 1; color: var(--charcoal); }
+  .foot__link--sm { font-size: 0.58cqw; }
+
+  .foot__colophon {
+    font-family: var(--grotesque);
+    font-size: 0.58cqw;
+    letter-spacing: 0.14em;
+    color: var(--graphite);
+    opacity: 0.5;
+    margin: 0;
+    text-align: right;
+  }
+
+  .enquire__fine { display: flex; flex-direction: column; gap: 0.3cqh; }
+  .enquire__fineline {
+    font-family: var(--grotesque);
+    font-size: 0.56cqw;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--graphite);
+    opacity: 0.45;
+    line-height: 1.8;
+    margin: 0;
+  }
+
+  .foot__legal {
+    display: flex;
+    align-items: center;
+    gap: 1.6cqw;
+    flex: none;
+  }
+  .foot__copy {
+    font-family: var(--grotesque);
+    font-size: 0.56cqw;
+    letter-spacing: 0.12em;
+    color: var(--graphite);
+    opacity: 0.45;
+  }
+
+  /* --- mobile --- */
+  @media (max-width: 768px) {
+    .enquire { padding: 16cqw 7cqw 6cqw; min-height: 0; }
+
+    .enq-head { gap: 3cqw; margin-bottom: 9cqw; }
+    .enq-head__label { font-size: 2.8cqw; }
+
+    .enq-body {
+      grid-template-columns: 1fr;
+      gap: 11cqw;
+      padding-bottom: 12cqw;
+    }
+    .enq-title { font-size: 6.4cqw; margin-bottom: 3.5cqw; }
+    .enq-sub { font-size: 3cqw; max-width: none; line-height: 1.8; }
+
+    .field { margin-bottom: 5cqw; }
+    .field__label { font-size: 3cqw; top: 3.4cqw; }
+    .field__input {
+      font-size: 4.6cqw;
+      padding: 3cqw 0;          /* >= 44px tap height */
+      margin-top: 4cqw;
+    }
+    .field__input:focus ~ .field__label,
+    .field__input:not(:placeholder-shown) ~ .field__label {
+      transform: translateY(-4cqw);
+      font-size: 2.4cqw;
+    }
+    .enquire__cta {
+      font-size: 3.2cqw;
+      padding: 3.4cqw 10cqw;    /* >= 44px in both axes */
+      margin-top: 3cqw;
+      align-self: stretch;
+      text-align: center;
+    }
+
+    .contact {
+      border-left: none;
+      border-top: 1px solid var(--hairline);
+      padding-left: 0;
+      padding-top: 7cqw;
+    }
+    .contact__heading { font-size: 2.9cqw; margin-bottom: 3.5cqw; }
+    .contact__line { font-size: 3.1cqw; line-height: 2; }
+    .contact__hours { font-size: 2.8cqw; margin-top: 3.5cqw; }
+
+    /* the footer stacks; nothing is asked to sit on one line */
+    .foot__row {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 5cqw;
+      padding: 6cqw 0;
+    }
+    .foot__row--fine { align-items: flex-start; gap: 5cqw; }
+    .foot__word { font-size: 3.2cqw; }
+    .foot__nav { flex-wrap: wrap; gap: 4cqw; }
+    .foot__link { font-size: 2.7cqw; }
+    .foot__link--sm { font-size: 2.5cqw; }
+    .foot__colophon { font-size: 2.4cqw; text-align: left; }
+    .enquire__fineline { font-size: 2.3cqw; line-height: 1.9; }
+    .foot__legal { gap: 4cqw; flex-wrap: wrap; }
+    .foot__copy { font-size: 2.3cqw; }
+  }
+</style>

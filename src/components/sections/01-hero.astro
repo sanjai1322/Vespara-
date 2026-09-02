@@ -1,0 +1,125 @@
+---
+import site from '../../config/site.config.js';
+---
+
+<section class="section section--bleed hero" id="hero" data-bleed>
+  <div class="hero__image-wrapper">
+    <img
+      class="frame hero__img"
+      src={`/frames/${site.frames.hero}`}
+      alt=""
+      fetchpriority="high"
+    />
+    <div class="hero__vignette"></div>
+  </div>
+
+  <div class="hero__content grid-asymmetric pad-massive">
+    <div class="hero__title-block">
+      <h1 class="hero__brand t-heading-huge" data-reveal>{site.brand}</h1>
+      <p class="hero__tagline" data-reveal>{site.tagline}</p>
+    </div>
+    
+    <div class="hero__scroll-indicator">
+      <span class="hero__scroll-line"></span>
+      <span class="t-label hero__scroll-text">SCROLL TO EXPLORE</span>
+    </div>
+  </div>
+</section>
+
+<style>
+  .hero {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+  }
+
+  .hero__image-wrapper {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+  }
+
+  .hero__img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transform: scale(1.12); /* Start scale for GSAP reveal */
+  }
+
+  .hero__vignette {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgba(10, 10, 9, 0.8) 0%, rgba(10, 10, 9, 0) 40%);
+    pointer-events: none;
+  }
+
+  .hero__content {
+    position: relative;
+    z-index: 10;
+    align-items: flex-end;
+    padding-bottom: 8cqh;
+  }
+
+  .hero__title-block {
+    grid-column: 1 / 10;
+    display: flex;
+    flex-direction: column;
+    gap: 2cqh;
+  }
+
+  .hero__brand {
+    color: var(--bone);
+    margin: 0;
+  }
+
+  .hero__tagline {
+    font-family: var(--grotesque);
+    font-size: 1.15cqw;
+    line-height: 1.6;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    font-weight: 400;
+    color: rgba(253, 252, 249, 0.7);
+    margin: 0;
+  }
+
+  .hero__scroll-indicator {
+    grid-column: 11 / 13;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 1.5cqh;
+  }
+
+  .hero__scroll-line {
+    width: 1px;
+    height: 6cqh;
+    background: var(--bone);
+    opacity: 0.5;
+  }
+
+  .hero__scroll-text {
+    writing-mode: vertical-rl;
+    color: var(--bone);
+    opacity: 0.6;
+    font-size: 0.65cqw;
+    letter-spacing: 0.2em;
+  }
+
+  @media (max-width: 768px) {
+    .hero__title-block { grid-column: 1 / -1; }
+    .hero__scroll-indicator { display: none; }
+    
+    .hero__brand { font-size: 16cqw; }
+    .hero__tagline {
+      font-size: 3.2cqw;
+      letter-spacing: 0.2em;
+      line-height: 1.7;
+    }
+  }
+</style>

@@ -1,0 +1,606 @@
+---
+import site from '../../config/site.config.js';
+import PlanStatic from '../PlanStatic.astro';
+import {
+  MAX_PLATE, roomsFor, plateRect, balconyLines, glazingLines, DIM_OFF,
+  labelSize, labelPos,
+} from '../../lib/plan.js';
+
+const L = site.residenceSpecLabels;
+const U = site.units;
+
+const first = site.residences[0];
+const firstRooms = roomsFor(first);
+const firstPlate = plateRect(first);
+const bal0 = balconyLines(firstRooms.find((r) => r.balcony));
+const gl0 = glazingLines(firstRooms.find((r) => r.glaze));
+
+// initial label placement; the morph renderer recomputes these each frame
+const firstLabels = firstRooms.map((rm) => ({
+  id: rm.id, label: rm.label, fs: labelSize(rm), ...labelPos(rm),
+}));
+
+const VB_X = -DIM_OFF - 16;
+const VB_Y = -16;
+const VB_W = MAX_PLATE.w + DIM_OFF + 44;
+const VB_H = MAX_PLATE.h + DIM_OFF + 48;
+
+const FS = site.finishSchedule;
+
+site.residences.forEach(r => {
+  const calc = Math.round(parseFloat(r.dims.w) * parseFloat(r.dims.h));
+  if (calc !== parseInt(r.area)) {
+    throw new Error(`Area assertion failed for ${r.name}: ${r.dims.w} x ${r.dims.h} = ${calc}, but displayed as ${r.area}`);
+  }
+});
+---
+
+
+<section class="section residences" id="residences">
+  <!-- THE DRAWING PERSISTS. It sits outside the scrolling track so it never
+       leaves the frame mid-morph — the specification scrolls past it while
+       the plan keeps redrawing itself. -->
+  <div class="res__plan" data-res-plan>
+    <svg
+      class="plan"
+      data-morph-plan
+      viewBox={`${VB_X} ${VB_Y} ${VB_W} ${VB_H}`}
+      preserveAspectRatio="xMidYMid meet"
+      aria-hidden="true"
+    >
+      <g data-plan-rooms>
+        {firstRooms.map((rm) => (
+          <rect class="plan-part" data-room={rm.id} x={rm.x} y={rm.y} width={rm.w} height={rm.h} />
+        ))}
+      </g>
+
+      <g data-plan-balcony>
+        {bal0.map((b, i) => (
+          <line class="plan-balcony" data-balcony={i} x1={b.x1} y1={b.y1} x2={b.x2} y2={b.y2} />
+        ))}
+      </g>
+
+      <!-- seaward glazing run: the doubled thin line convention -->
+      <g data-plan-glazing>
+        {gl0.map((g, i) => (
+          <line class="plan-glaze" data-glaze={i} x1={g.x1} y1={g.y1} x2={g.x2} y2={g.y2} />
+        ))}
+      </g>
+
+      <g data-plan-doors>
+        {firstRooms.map((rm) => (
+          <path class="plan-door" data-door={rm.id} />
+        ))}
+      </g>
+
+      <!-- the plate itself grows through the morph -->
+      <rect
+        class="plan-exterior"
+        data-plate
+        x={firstPlate.x}
+        y={firstPlate.y}
+        width={firstPlate.w}
+        height={firstPlate.h}
+      />
+
+      <!-- dimension lines on two edges, re-measured continuously -->
+      <g class="plan-dims">
+        <line class="dim-line" data-dim-line="w" x1={firstPlate.x} y1={firstPlate.y + firstPlate.h + DIM_OFF} x2={firstPlate.x + firstPlate.w} y2={firstPlate.y + firstPlate.h + DIM_OFF} />
+        <line class="dim-tick" data-dim-tick="w1" x1={firstPlate.x} y1={firstPlate.y + firstPlate.h + DIM_OFF - 5} x2={firstPlate.x} y2={firstPlate.y + firstPlate.h + DIM_OFF + 5} />
+        <line class="dim-tick" data-dim-tick="w2" x1={firstPlate.x + firstPlate.w} y1={firstPlate.y + firstPlate.h + DIM_OFF - 5} x2={firstPlate.x + firstPlate.w} y2={firstPlate.y + firstPlate.h + DIM_OFF + 5} />
+        <text class="dim-text" data-dim="w" x={firstPlate.x + firstPlate.w / 2} y={firstPlate.y + firstPlate.h + DIM_OFF - 6} text-anchor="middle">{first.dims.w}</text>
+
+        <line class="dim-line" data-dim-line="h" x1={firstPlate.x - DIM_OFF} y1={firstPlate.y} x2={firstPlate.x - DIM_OFF} y2={firstPlate.y + firstPlate.h} />
+        <line class="dim-tick" data-dim-tick="h1" x1={firstPlate.x - DIM_OFF - 5} y1={firstPlate.y} x2={firstPlate.x - DIM_OFF + 5} y2={firstPlate.y} />
+        <line class="dim-tick" data-dim-tick="h2" x1={firstPlate.x - DIM_OFF - 5} y1={firstPlate.y + firstPlate.h} x2={firstPlate.x - DIM_OFF + 5} y2={firstPlate.y + firstPlate.h} />
+        <text class="dim-text" data-dim="h" x={firstPlate.x - DIM_OFF - 7} y={firstPlate.y + firstPlate.h / 2} text-anchor="middle" transform={`rotate(-90 ${firstPlate.x - DIM_OFF - 7} ${firstPlate.y + firstPlate.h / 2})`}>{first.dims.h}</text>
+      </g>
+
+      <g data-plan-labels>
+        {firstLabels.map((l) => (
+          <text
+            class="plan-label"
+            data-label={l.id}
+            font-size={l.fs}
+            x={l.x}
+            y={l.y}
+            text-anchor="middle"
+            dominant-baseline="middle"
+          >{l.label}</text>
+        ))}
+      </g>
+    </svg>
+
+    <!-- NORTH ARROW beside the plan -->
+    <div class="res__north">
+      <svg class="res__north-svg" viewBox="0 0 20 46" aria-hidden="true">
+        <line class="north__line" x1="10" y1="46" x2="10" y2="12" />
+        <path class="north__head" d="M 10 2 L 14.5 14 L 5.5 14 Z" />
+      </svg>
+      <span class="t-label res__north-label">N</span>
+    </div>
+
+    <!-- SEA arrow pointing toward the terrace edge -->
+    <div class="res__sea-arrow">
+      <span class="res__sea-line"></span>
+      <span class="t-label res__sea-label">SEA</span>
+    </div>
+
+    <!-- SECTION DRAWING: side-view cut beneath the plan area -->
+    <div class="res__xsection" data-res-xsection>
+      <svg class="xsection-svg" viewBox="0 0 200 70" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+        <!-- roof slab -->
+        <line class="xs-roof" data-xs-roof x1="10" y1="10" x2="190" y2="10" />
+        <!-- left wall -->
+        <line class="xs-wall" data-xs-wall-l x1="10" y1="10" x2="10" y2="55" />
+        <!-- right wall (shorter — terrace opens) -->
+        <line class="xs-wall" data-xs-wall-r x1="140" y1="10" x2="140" y2="55" />
+        <!-- floor -->
+        <line class="xs-floor" data-xs-floor x1="10" y1="55" x2="140" y2="55" />
+        <!-- terrace projecting seaward -->
+        <line class="xs-terrace" data-xs-terr-top x1="140" y1="55" x2="190" y2="55" />
+        <line class="xs-terrace" data-xs-terr-rail x1="190" y1="50" x2="190" y2="55" />
+        <!-- ceiling height dimension -->
+        <line class="xs-dim" x1="4" y1="10" x2="4" y2="55" />
+        <line class="xs-dim-tick" x1="1" y1="10" x2="7" y2="10" />
+        <line class="xs-dim-tick" x1="1" y1="55" x2="7" y2="55" />
+        <text class="xs-dim-text" data-xs-height x="4" y="34" text-anchor="middle" transform="rotate(-90 4 34)">{first.ceiling} M</text>
+        <!-- section label -->
+        <text class="xs-label" x="70" y="36" text-anchor="middle">SECTION</text>
+      </svg>
+    </div>
+  </div>
+
+  <!-- DRAWING TITLE BLOCK — lower left, matching section 02's convention -->
+  <div class="res__titleblock" data-res-titleblock>
+    <div class="tb__row">
+      <span class="tb__key">PROJECT</span>
+      <span class="tb__val">VESPERA</span>
+    </div>
+    <div class="tb__row">
+      <span class="tb__key">DRAWING</span>
+      <span class="tb__val" data-tb-drawing>{first.name} — PLAN & SECTION</span>
+    </div>
+    <div class="tb__row">
+      <span class="tb__key">SCALE</span>
+      <span class="tb__val">1:100</span>
+    </div>
+    <div class="tb__row">
+      <span class="tb__key">REVISION</span>
+      <span class="tb__val">C</span>
+    </div>
+  </div>
+
+  <div class="res__viewport" data-res-viewport>
+    <div class="res__track" data-res-track>
+      {site.residences.map((r, i) => (
+        <article class="res-panel" data-res-panel data-index={i}>
+          <!-- desktop: this column is left empty for the persistent morphing
+               drawing above. Mobile: each panel draws its own static plan. -->
+          <div class="res-panel__gutter">
+            <div class="res-panel__mobileplan" data-mobile-plan>
+              <PlanStatic residence={r} />
+            </div>
+          </div>
+
+          <div class="res-panel__spec">
+            <!-- No photographic backdrop here on purpose: this section is
+                 drawn, not decorated, and interior/materials photography
+                 already carries sections 03/04 — repeating it behind a
+                 technical floor-plan configurator is what "don't repeat
+                 the images" was flagging. -->
+            <div class="res-panel__content">
+              <div class="res-panel__header">
+                <h2 class="res-panel__name" data-panel-name>{r.name}</h2>
+                <p class="t-label res-panel__beds">{r.collection} &mdash; {r.beds}</p>
+              </div>
+
+              <div class="configurator-specs">
+                <div class="config-item">
+                  <span class="config-k">{L.area}</span>
+                  <span class="config-v"><span data-count={r.area}>{r.area}</span> m<sup class="unit-sup">2</sup></span>
+                </div>
+                <div class="config-item">
+                  <span class="config-k">{L.aspect}</span>
+                  <span class="config-v">{r.aspect}</span>
+                </div>
+                <div class="config-item">
+                  <span class="config-k">{L.terrace}</span>
+                  <span class="config-v">{r.terrace} m<sup class="unit-sup">2</sup></span>
+                </div>
+                <div class="config-item config-item--price">
+                  <span class="config-k">{L.price}</span>
+                  <span class="config-v"><span class="spec__cur">{U.currency}</span>{r.price} {U.crore}</span>
+                </div>
+              </div>
+
+              <div class="configurator-finish" data-finish-schedule>
+                {FS.slice(0, 3).map((row) => (
+                  <div class="finish-pill" data-finish-row>
+                    <span class="finish-pill__v">{row[1]}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </article>
+      ))}
+    </div>
+  </div>
+</section>
+
+<style>
+  .residences { background: var(--limestone); }
+
+  /* the persistent drawing — left 44%, vertically centred in the frame */
+  .res__plan {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 44%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    padding-left: 6cqw;
+    gap: 4cqh;
+    z-index: 2;
+    pointer-events: none;
+  }
+  .plan {
+    width: 32cqw;
+    height: auto;
+    overflow: visible;
+  }
+
+  .plan :global(rect),
+  .plan :global(path),
+  .plan :global(line) {
+    fill: none;
+    stroke: var(--hairline);
+    stroke-width: 1;
+    vector-effect: non-scaling-stroke;
+  }
+  .plan :global(.plan-exterior) {
+    stroke: rgba(28, 27, 24, 0.55);
+    stroke-width: 2;
+  }
+  .plan :global(.plan-door) { stroke: rgba(28, 27, 24, 0.22); }
+  .plan :global(.plan-balcony) { stroke: rgba(28, 27, 24, 0.1); }
+  .plan :global(.plan-glaze) { stroke: rgba(28, 27, 24, 0.3); stroke-width: 0.75; }
+  .plan :global(.dim-line),
+  .plan :global(.dim-tick) { stroke: rgba(28, 27, 24, 0.2); }
+
+  .plan :global(.plan-label),
+  .plan :global(.dim-text) {
+    fill: var(--graphite);
+    stroke: none;
+    font-family: var(--grotesque);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    font-variant-numeric: tabular-nums;
+  }
+  .plan :global(.plan-label) { fill-opacity: 0.5; font-size: 4.4px; letter-spacing: 0.06em; }
+  .plan :global(.dim-text) { fill-opacity: 0.6; font-size: 6.2px; }
+
+  /* --- NORTH ARROW beside the plan --- */
+  .res__north {
+    position: absolute;
+    left: 6cqw;
+    top: 14cqh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5cqh;
+  }
+  .res__north-svg {
+    width: 0.9cqw;
+    height: 3.4cqh;
+    overflow: visible;
+  }
+  .res__north-svg :global(line) {
+    stroke: var(--hairline);
+    stroke-width: 1;
+    vector-effect: non-scaling-stroke;
+  }
+  .res__north-svg :global(path) {
+    fill: none;
+    stroke: var(--graphite);
+    stroke-width: 1;
+    vector-effect: non-scaling-stroke;
+  }
+  .res__north-label {
+    font-size: 0.68cqw;
+    color: var(--graphite);
+    opacity: 0.7;
+  }
+
+  /* --- SEA arrow pointing toward the terrace --- */
+  .res__sea-arrow {
+    position: absolute;
+    left: 4cqw;
+    bottom: 32cqh;
+    display: flex;
+    align-items: center;
+    gap: 0.6cqw;
+  }
+  .res__sea-line {
+    display: block;
+    width: 4cqw;
+    height: 1px;
+    background: var(--hairline);
+    position: relative;
+  }
+  .res__sea-line::after {
+    content: '';
+    position: absolute;
+    right: -2px;
+    top: -3px;
+    width: 0;
+    height: 0;
+    border-left: 5px solid var(--hairline);
+    border-top: 3px solid transparent;
+    border-bottom: 3px solid transparent;
+  }
+  .res__sea-label {
+    font-size: 0.68cqw;
+    color: var(--graphite);
+    opacity: 0.55;
+  }
+
+  /* --- SECTION DRAWING beneath the plan --- */
+  .res__xsection {
+    width: 28cqw;
+    pointer-events: none;
+  }
+  .xsection-svg {
+    width: 100%;
+    height: auto;
+    overflow: visible;
+  }
+  .xsection-svg :global(line),
+  .xsection-svg :global(path) {
+    fill: none;
+    vector-effect: non-scaling-stroke;
+  }
+  .xsection-svg :global(.xs-roof) {
+    stroke: rgba(28, 27, 24, 0.7);
+    stroke-width: 1.5;
+  }
+  .xsection-svg :global(.xs-wall) {
+    stroke: rgba(28, 27, 24, 0.45);
+    stroke-width: 1;
+  }
+  .xsection-svg :global(.xs-floor) {
+    stroke: rgba(28, 27, 24, 0.45);
+    stroke-width: 1;
+  }
+  .xsection-svg :global(.xs-terrace) {
+    stroke: rgba(28, 27, 24, 0.25);
+    stroke-width: 0.75;
+  }
+  .xsection-svg :global(.xs-dim),
+  .xsection-svg :global(.xs-dim-tick) {
+    stroke: rgba(28, 27, 24, 0.2);
+    stroke-width: 0.5;
+  }
+  .xsection-svg :global(.xs-dim-text),
+  .xsection-svg :global(.xs-label) {
+    fill: var(--graphite);
+    fill-opacity: 0.55;
+    stroke: none;
+    font-family: var(--grotesque);
+    font-size: 7px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+
+  /* --- DRAWING TITLE BLOCK lower-left --- */
+  .res__titleblock {
+    position: absolute;
+    left: 4cqw;
+    bottom: 3cqh;
+    z-index: 2;
+    pointer-events: none;
+    border: 1px solid rgba(28, 27, 24, 0.18);
+    width: 18cqw;
+  }
+  .tb__row {
+    display: flex;
+    border-bottom: 1px solid rgba(28, 27, 24, 0.12);
+    font-family: var(--grotesque);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+  }
+  .tb__row:last-child { border-bottom: none; }
+  .tb__key {
+    width: 38%;
+    padding: 0.5cqh 0.6cqw;
+    font-size: 0.55cqw;
+    color: var(--graphite);
+    opacity: 0.5;
+  }
+  .tb__val {
+    width: 62%;
+    padding: 0.5cqh 0.6cqw;
+    font-size: 0.55cqw;
+    color: var(--charcoal);
+    opacity: 0.75;
+    border-left: 1px solid rgba(28, 27, 24, 0.12);
+  }
+
+  /* The specification scrolls inside its OWN column, not across the whole
+     frame — otherwise each panel spends most of its travel as dead space.
+     The drawing owns the left 44%; the spec owns the right 56%. */
+  .res__viewport {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 56%;
+    height: 100%;
+    overflow: hidden;
+    z-index: 1;
+  }
+  .res__track {
+    display: flex;
+    height: 100%;
+    width: max-content;
+  }
+
+  .res-panel {
+    width: 56cqw;
+    height: 100%;
+    flex: none;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding-left: 0;
+  }
+  .res-panel__gutter { display: none; }
+
+  .res-panel__spec {
+            position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 6cqh 6cqw;
+    overflow: hidden;
+  }
+
+  .res-panel__content {
+    position: relative;
+    z-index: 2;
+    color: var(--charcoal);
+  }
+
+  /* the per-panel plan is mobile-only; desktop uses the persistent drawing */
+  .res-panel__mobileplan { display: none; }
+
+  .res-panel__header {
+    margin-bottom: 4cqh;
+  }
+
+  .res-panel__name {
+    font-family: var(--serif);
+    font-size: 4cqw;
+    line-height: 1;
+    letter-spacing: -0.01em;
+    color: var(--charcoal);
+    font-weight: 400;
+    margin: 0;
+  }
+  .res-panel__beds {
+    color: var(--graphite);
+    font-size: 0.75cqw;
+    margin-top: 1.5cqh;
+    letter-spacing: 0.15em;
+  }
+
+  .configurator-specs {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 3cqw 2cqh;
+    margin-bottom: 4cqh;
+    border-top: 1px solid var(--hairline);
+    padding-top: 3cqh;
+  }
+
+  .config-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8cqh;
+  }
+
+  .config-k {
+    font-family: var(--grotesque);
+    font-size: 0.65cqw;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--graphite);
+  }
+  
+  .config-v {
+    font-family: var(--serif);
+    font-size: 1.4cqw;
+    color: var(--charcoal);
+    font-variant-numeric: tabular-nums;
+    position: relative;
+  }
+
+  .spec__cur {
+    font-family: var(--grotesque);
+    font-size: 0.6em;
+    margin-right: 0.3em;
+    vertical-align: super;
+    opacity: 0.7;
+  }
+
+  .configurator-finish {
+    display: flex;
+    gap: 1cqw;
+    flex-wrap: wrap;
+  }
+
+  /* square, no blur — this brand carries no glassmorphism, no rounded
+     corners anywhere; the tag reads as a drawn label, not a UI chip */
+  .finish-pill {
+    padding: 0.6cqh 1.2cqw;
+    border: 1px solid var(--hairline);
+    border-radius: 0;
+  }
+
+  .finish-pill__v {
+    font-family: var(--grotesque);
+    font-size: 0.55cqw;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--graphite);
+  }
+
+  /* --- mobile: one residence per screen, plan full width above specs --- */
+  @media (max-width: 768px) {
+    .residences {
+      height: auto;
+      min-height: 100vh;
+      container-type: inline-size;
+      overflow: visible;
+    }
+    .res__plan { display: none; }  /* each panel draws its own on mobile */
+    .res__xsection { display: none; }
+    .res__titleblock { display: none; }
+    .res__viewport {
+      position: static;
+      width: 100%;
+      overflow: visible;
+    }
+    .res__track { flex-direction: column; width: 100%; }
+    .res-panel__gutter { display: block; }
+    .res-panel {
+      width: 100%;
+      height: auto;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 12cqw 7cqw;
+    }
+    .res-panel__mobileplan {
+      display: block;
+      margin-bottom: 7cqw;
+    }
+    .res-panel__spec { padding-right: 0; margin-top: 0; }
+    .res-panel__name { font-size: 8cqw; }
+    .res-panel__beds { font-size: 2.6cqw; }
+    .spec__k { font-size: 2.8cqw; }
+    .spec__v { font-size: 3.6cqw; }
+    .spec__row { padding: 1.8cqw 0; }
+    .finish__k { font-size: 2.4cqw; }
+    .finish__v { font-size: 2.4cqw; }
+    .finish__row { padding: 1.4cqw 2cqw; }
+  }
+</style>

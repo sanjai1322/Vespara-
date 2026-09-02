@@ -1,0 +1,61 @@
+---
+import '../styles/global.css';
+import site from '../config/site.config.js';
+import Monogram from '../components/Monogram.astro';
+
+const { title } = Astro.props;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/webp" href="/frames/hero.webp" />
+    <title>{title ?? site.brand}</title>
+
+    <!-- Fonts: Playfair Display (didone serif) + Archivo (neutral grotesque) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600&family=Playfair+Display:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+  <!-- Decided before first paint: a returning visitor within this
+       session never sees the loader flash at all. -->
+  <script is:inline>
+    try {
+      if (sessionStorage.getItem('vespera:seen') === '1') {
+        document.documentElement.setAttribute('data-loaded', 'true');
+      }
+    } catch (e) {
+      /* private mode — the loader simply runs */
+    }
+  </script>
+  </head>
+  <body>
+    <!-- page loader: the monogram constructs itself while a counter reports
+         real asset progress, then the whole thing lifts. Once per session. -->
+    <div class="loader" data-loader aria-hidden="true">
+      <div class="loader__mono">
+        <Monogram color="var(--charcoal)" size="7vw" />
+        <span class="loader__wordmark" data-loader-wordmark>VESPERA</span>
+      </div>
+      <span class="loader__count t-label" data-loader-count>000</span>
+    </div>
+
+    <!-- Global Progress System -->
+    <div class="global-progress">
+      <div class="global-progress__bar" data-global-progress></div>
+      <div class="global-progress__text" data-global-progress-text>01</div>
+    </div>
+    
+    <slot />
+
+    <!-- motion layer — imported once for the whole site -->
+    <script>
+      import '../scripts/motion.js';
+    </script>
+    <slot name="scripts" />
+  </body>
+</html>

@@ -1,0 +1,420 @@
+---
+import site from '../../config/site.config.js';
+
+// Chennai east coast: the Bay of Bengal is on the RIGHT, land to the left.
+//
+// The previous map drew the sea as straight vertical rulings beside a dead
+// straight coastline, with hand-authored bezier "roads" that met nothing. Under
+// preserveAspectRatio="none" they stretched into noise. This version is built
+// as a real survey drawing: land and water are tonal FIELDS, the coast is a
+// worked shoreline with a headland and the cove the project sits in, and every
+// road terminates at a junction that actually exists.
+//
+// The 0-100 square with preserveAspectRatio="none" is kept deliberately: the
+// pins are HTML positioned in percent, so sharing one stretched coordinate
+// space is what guarantees a pin lands exactly on its road at every viewport.
+// Geometry is therefore authored in the stretched space, not corrected for it.
+
+// --- COASTLINE ------------------------------------------------------------
+// north headland, the cove that holds VESPERA, then south to the river mouth
+const coastD =
+  'M 78 0 ' +
+  'C 77 8 74 12 72 18 ' +      // headland shoulder
+  'C 70 24 71 30 73 35 ' +     // point
+  'C 75 40 74 46 70 51 ' +     // cove mouth
+  'C 67 55 66 60 68 65 ' +     // the cove — VESPERA sits on its lip
+  'C 70 70 73 74 74 80 ' +
+  'C 75 87 74 94 76 100';
+
+// land is everything WEST of the coast; close the path off the left edge
+const landD = coastD + ' L 0 100 L 0 0 Z';
+
+// depth contours: offset copies of the shoreline, fading seaward. Offsetting a
+// bezier properly is overkill here — translating it reads correctly because the
+// coast runs broadly north-south.
+// Two only, and faint. Five heavy offsets turned the bay into wood grain; the
+// tonal field is what says "water", the contours only give it a near-shore
+// shimmer.
+const seaLines = [
+  { dx: 2.6, o: 0.22 },
+  { dx: 7.5, o: 0.09 },
+];
+
+// --- ROAD NETWORK ---------------------------------------------------------
+// Junction nodes, so every road starts and ends somewhere real.
+const N = {
+  ecr: [60, 16],        // ECR JUNCTION
+  omr: [34, 30],        // OLD MAHABALIPURAM RD
+  park: [20, 52],       // BOTANICAL PARK
+  vespera: [64, 58],    // the project
+  golf: [44, 44],       // GOLF CLUB
+  school: [26, 76],     // INTERNATIONAL SCHOOL
+  airport: [12, 30],    // AIRPORT
+};
+
+// East Coast Road — the spine, running parallel to the shore edge to edge,
+// passing through the ECR junction and the VESPERA approach.
+const ecrD = 'M 57 0 C 59 8 60 12 60 16 C 61 28 62 40 63 48 C 64 53 64 56 64 58 C 65 68 63 80 62 100';
+
+// inland arterial: the sea road to OMR, via the golf club
+const inlandD = 'M 64 58 C 58 54 50 48 44 44 C 40 41 36 35 34 30 C 27 29 20 30 12 30';
+
+const arterials = [ecrD, inlandD];
+
+const secondaries = [
+  // OMR running south to the school
+  'M 34 30 C 32 42 30 56 28 66 C 27 71 26 74 26 76',
+  // park link off OMR
+  'M 34 30 C 29 36 24 45 20 52',
+  // park to golf club
+  'M 20 52 C 28 49 38 47 44 44',
+];
+
+const minors = [
+  // school back to the coast road
+  'M 26 76 C 38 72 52 64 64 58',
+  // park spur south to the frame edge
+  'M 20 52 C 19 66 20 84 21 100',
+  // northern lane feeding the ECR junction
+  'M 0 12 C 16 13 34 15 48 16 C 53 16 57 16 60 16',
+  // airport service road
+  'M 12 30 C 11 44 12 56 11 70',
+];
+
+// --- GREEN SPACES ---------------------------------------------------------
+// The two pins that are genuinely open land read as fields, not as dots on an
+// empty sheet. This is what carries most of the map's density.
+const greens = [
+  // botanical park, around [20, 52]
+  'M 13 45 C 19 43 26 45 28 50 C 30 55 27 61 21 62 C 15 63 11 58 11 53 C 11 49 11 46 13 45 Z',
+  // golf club, around [44, 44]
+  'M 38 38 C 44 36 51 38 53 43 C 55 48 51 52 45 52 C 39 52 35 48 35 44 C 35 41 36 39 38 38 Z',
+];
+
+// --- WATERCOURSE ----------------------------------------------------------
+// a creek running out of the interior to the shore, south of the cove
+const creekD = 'M 0 88 C 12 86 24 84 34 82 C 44 80 54 80 62 82 C 68 83 72 85 74 88';
+
+// --- STREET TEXTURE -------------------------------------------------------
+// short lanes around the two junctions, so the network thins out from the
+// arterials rather than stopping dead
+const lanes = [
+  'M 34 30 L 40 24', 'M 34 30 L 28 24', 'M 34 30 L 40 36',
+  'M 60 16 L 66 11', 'M 60 16 L 55 22', 'M 60 16 L 66 21',
+  'M 26 76 L 32 82', 'M 26 76 L 20 70',
+  'M 12 30 L 6 24',  'M 12 30 L 18 36',
+];
+
+// --- GRATICULE ------------------------------------------------------------
+// a faint survey grid; cartographic precision, not decoration
+const gridX = [12, 28, 44, 60, 76, 92];
+const gridY = [16, 34, 52, 70, 88];
+---
+
+<section class="section location" id="location" data-section-index="05">
+  <div class="location__frame">
+    <svg class="map" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+      <!-- FIELDS: land and water read as tone first, the way a map does.
+           Everything above them is drawn line work. -->
+      <rect class="map-sea-field" x="0" y="0" width="100" height="100" />
+      <path class="map-land-field" d={landD} />
+
+      <defs>
+        <clipPath id="landClip"><path d={landD} /></clipPath>
+      </defs>
+
+      <!-- survey graticule, under the network and clipped to the land -->
+      <g class="map-grid" clip-path="url(#landClip)">
+        {gridX.map((x) => <line class="map-grid-line" x1={x} y1="0" x2={x} y2="100" />)}
+        {gridY.map((y) => <line class="map-grid-line" x1="0" y1={y} x2="100" y2={y} />)}
+      </g>
+
+      <!-- open land: the park and the golf club as fields -->
+      {greens.map((d) => <path class="map-green" d={d} />)}
+
+      <!-- depth contours, following the shoreline rather than ruling across it -->
+      {seaLines.map((s) => (
+        <path
+          class="map-path map-water"
+          d={coastD}
+          transform={`translate(${s.dx} 0)`}
+          style={`opacity:${s.o}`}
+        />
+      ))}
+
+      <!-- the shoreline itself -->
+      <path class="map-path map-coast" d={coastD} />
+
+      <!-- ROAD NETWORK, drawn heaviest first so junctions read cleanly -->
+      {arterials.map((d) => <path class="map-path map-arterial" d={d} />)}
+      {secondaries.map((d) => <path class="map-path map-secondary" d={d} />)}
+      {minors.map((d) => <path class="map-path map-minor" d={d} />)}
+      <path class="map-path map-creek" d={creekD} />
+      {lanes.map((d) => <path class="map-path map-minor map-lane" d={d} />)}
+    </svg>
+
+    <!-- BAY OF BENGAL label, seaward side -->
+    <span class="t-label map__sealabel">BAY OF BENGAL</span>
+
+    <!-- pins -->
+    {site.mapPins.map((pin) => (
+      <div
+        class="pin"
+        class:list={[{ 'pin--primary': pin.primary, 'pin--left': pin.anchor === 'left' }]}
+        style={`--px:${pin.x}%;--py:${pin.y}%;--pym:${pin.mobileY ?? pin.y}%`}
+        data-pin
+        data-primary={pin.primary ? 'true' : null}
+      >
+        {pin.primary && <span class="pin__pulse" data-pulse></span>}
+        <span class="pin__dot"></span>
+        <span class="pin__text">
+          <span class="pin__label t-label">{pin.label}</span>
+          {pin.drive && <span class="pin__drive t-label">{pin.drive}</span>}
+        </span>
+      </div>
+    ))}
+
+    <!-- scale bar -->
+    <div class="mapfurniture scalebar" data-furniture>
+      <span class="t-label scalebar__from">{site.map.scaleBar.from}</span>
+      <span class="scalebar__rule"></span>
+      <span class="t-label scalebar__to">{site.map.scaleBar.to}</span>
+    </div>
+
+    <!-- north arrow -->
+    <div class="mapfurniture north" data-furniture>
+      <svg class="north__svg" viewBox="0 0 20 46" aria-hidden="true">
+        <line class="north__line" x1="10" y1="46" x2="10" y2="12" />
+        <path class="north__head" d="M 10 2 L 14.5 14 L 5.5 14 Z" />
+      </svg>
+      <span class="t-label north__label">{site.map.north}</span>
+    </div>
+  </div>
+</section>
+
+<style>
+  .location { background: var(--limestone); }
+
+  /* Full screen bleed for cinematic map */
+  .location__frame {
+    position: absolute;
+    inset: 0;
+  }
+
+  .map {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+  }
+
+  /* :global — SVG children from map() expressions lack the scope attribute */
+  .map :global(path),
+  .map :global(line) {
+    fill: none;
+    stroke: var(--hairline);
+    vector-effect: non-scaling-stroke;
+  }
+
+  /* --- FIELDS: the sea is a tonal field, the land sits on top of it --- */
+  .map :global(.map-sea-field) {
+    fill: #E2E4E1;          /* a shade cooler and deeper than the land */
+    stroke: none;
+  }
+  .map :global(.map-land-field) {
+    fill: var(--limestone);
+    stroke: none;
+  }
+
+  .map :global(.map-green) {
+    fill: rgba(122, 132, 104, 0.13);
+    stroke: rgba(122, 132, 104, 0.3);
+    stroke-width: 1;
+  }
+  .map :global(.map-creek) {
+    stroke: rgba(90, 116, 128, 0.4);
+    stroke-width: 1;
+  }
+  .map :global(.map-lane) { opacity: 0.75; }
+
+  /* --- graticule --- */
+  .map :global(.map-grid-line) {
+    stroke: rgba(28, 27, 24, 0.055);
+    stroke-width: 1;
+  }
+
+  .map :global(.map-coast)     { stroke: rgba(28, 27, 24, 0.55); stroke-width: 1.1; }
+  .map :global(.map-water)     { stroke: rgba(28, 27, 24, 0.9);  stroke-width: 0.6; }
+  .map :global(.map-arterial)  { stroke: rgba(28, 27, 24, 0.42); stroke-width: 2.2; stroke-linecap: round; }
+  .map :global(.map-secondary) { stroke: rgba(28, 27, 24, 0.26); stroke-width: 1.3; stroke-linecap: round; }
+  .map :global(.map-minor)     { stroke: rgba(28, 27, 24, 0.15); stroke-width: 0.9; stroke-linecap: round; }
+
+  .map__sealabel {
+    position: absolute;
+    right: 4cqw;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.68cqw;
+    color: var(--graphite);
+    opacity: 0.7;
+    letter-spacing: 0.22em;
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+  }
+
+  /* --- pins --- */
+  .pin {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    display: flex;
+    align-items: center;
+    gap: 0.7cqw;
+    white-space: nowrap;
+    left: var(--px);
+    top: var(--py);
+  }
+  /* label runs inward, to the left of the dot */
+  .pin--left {
+    flex-direction: row-reverse;
+  }
+  .pin--left .pin__text { text-align: right; }
+
+  /* square survey markers — the brand is square, and a surveyor's mark is
+     the right primitive for a drawing rather than a UI dot */
+  .pin__dot {
+    width: 0.7cqw;
+    height: 0.7cqw;
+    border: 1px solid var(--graphite);
+    background: transparent;
+    flex: none;
+  }
+  .pin__text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35cqh;
+  }
+  .pin__label {
+    font-size: 0.92cqw;
+    color: var(--charcoal);
+    opacity: 0.85;
+    line-height: 1;
+  }
+  .pin__drive {
+    font-size: 0.72cqw;
+    color: var(--graphite);
+    opacity: 0.7;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* the destination — one of the bronze placements */
+  .pin--primary .pin__dot {
+    width: 1.2cqw;
+    height: 1.2cqw;
+    border-color: var(--bronze);
+    background: var(--bronze);
+  }
+  .pin--primary .pin__label {
+    color: var(--charcoal);
+    opacity: 1;
+    font-size: 1.02cqw;
+    letter-spacing: 0.26em;
+  }
+  /* single slow pulse ring, fired once after the pin lands */
+  .pin__pulse {
+    position: absolute;
+    left: 0.6cqw;
+    top: 50%;
+    width: 1.2cqw;
+    height: 1.2cqw;
+    margin: -0.6cqw 0 0 -0.6cqw;
+    border: 1px solid var(--bronze);
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  /* --- furniture --- */
+  .mapfurniture {
+    position: absolute;
+    display: flex;
+    align-items: center;
+  }
+  .scalebar {
+    left: 8cqw;
+    bottom: 6cqh;
+    gap: 0.7cqw;
+  }
+  .scalebar__rule {
+    position: relative;
+    display: block;
+    width: 7cqw;
+    height: 1px;
+    background: var(--hairline);
+  }
+  .scalebar__rule::before,
+  .scalebar__rule::after {
+    content: '';
+    position: absolute;
+    top: -0.5cqh;
+    height: 1.1cqh;
+    width: 1px;
+    background: var(--hairline);
+  }
+  .scalebar__rule::before { left: 0; }
+  .scalebar__rule::after { right: 0; }
+  .scalebar .t-label {
+    font-size: 0.68cqw;
+    color: var(--graphite);
+    opacity: 0.7;
+  }
+
+  .north {
+    right: 8cqw;
+    bottom: 6cqh;
+    flex-direction: column;
+    gap: 0.5cqh;
+  }
+  .north__svg {
+    width: 0.9cqw;
+    height: 3.4cqh;
+    overflow: visible;
+  }
+  .north__svg :global(.north__line) {
+    stroke: var(--hairline);
+    stroke-width: 1;
+    vector-effect: non-scaling-stroke;
+  }
+  .north__svg :global(.north__head) {
+    fill: none;
+    stroke: var(--graphite);
+    stroke-width: 1;
+    vector-effect: non-scaling-stroke;
+  }
+  .north__label {
+    font-size: 0.68cqw;
+    color: var(--graphite);
+    opacity: 0.7;
+  }
+
+  /* --- mobile: the map needs its own type scale and more room --- */
+  @media (max-width: 768px) {
+    .location__frame { inset: 20cqh 12cqw; }
+    .pin__dot { width: 2.4cqw; height: 2.4cqw; }
+    .pin { gap: 2cqw; }
+    /* the narrow frame moves a pin to its own row where a long neighbouring
+       label would otherwise run straight through it, and the type comes down
+       so a name like OLD MAHABALIPURAM RD still fits the land */
+    .pin { top: var(--pym); }
+    .pin__label { font-size: 2.7cqw; letter-spacing: 0.12em; }
+    .pin__drive { font-size: 2.3cqw; }
+    .pin--primary .pin__label { font-size: 3cqw; letter-spacing: 0.18em; }
+    .pin--primary .pin__dot { width: 3.6cqw; height: 3.6cqw; }
+    .scalebar { bottom: -9cqh; gap: 2cqw; }
+    .scalebar__rule { width: 18cqw; }
+    .scalebar .t-label { font-size: 2.8cqw; }
+    .north { bottom: -9cqh; }
+    .north__svg { width: 3cqw; height: 4cqh; }
+    .north__label { font-size: 2.8cqw; }
+  }
+</style>

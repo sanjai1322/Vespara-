@@ -1,0 +1,298 @@
+---
+import site from '../../config/site.config.js';
+const m = site.materials;
+---
+
+<section class="section materials" id="about">
+  <!-- PLATE 01 — the material study, shown once, whole, at its own aspect.
+       The previous pass stacked three scaled and rotated copies of this same
+       photograph on top of each other; that is what read as cheap. One plate
+       and one true detail crop is the drawing convention and it is stronger. -->
+  <figure class="mat-plate" data-mat-plate>
+    <div class="mat-plate__mask" data-mat-plate-mask style={`aspect-ratio:${m.plateRatio}`}>
+      <img class="mat-plate__img" src={`/frames/${site.frames.materials}`} alt="" data-mat-plate-img />
+    </div>
+    <figcaption class="mat-cap">
+      <span class="mat-cap__code">{m.plateCaption}</span>
+      <span class="mat-cap__rule"></span>
+      <span class="mat-cap__note">{m.plateNote}</span>
+    </figcaption>
+  </figure>
+
+  <!-- DETAIL A — a genuine macro of the SAME plate: a different region of the
+       photograph at close range, not a rotation of it. Overlaps the plate's
+       lower edge so the two read as one study. -->
+  <figure class="mat-detail" data-mat-detail>
+    <div class="mat-detail__mask" data-mat-detail-mask style={`aspect-ratio:${m.detailRatio}`}>
+      <img class="mat-detail__img" src={`/frames/${site.frames.materials}`} alt="" data-mat-detail-img />
+    </div>
+    <figcaption class="mat-cap mat-cap--light">
+      <span class="mat-cap__code">{m.detailCaption}</span>
+      <span class="mat-cap__rule"></span>
+      <span class="mat-cap__note">{m.detailNote}</span>
+    </figcaption>
+  </figure>
+
+  <!-- the philosophy, set right, each line landing on its own rule -->
+  <div class="materials__copy" data-mat-copy>
+    {site.philosophy.map((line) => (
+      <div class="materials__item" data-phil-item>
+        <p class="materials__line" data-phil-line>{line}</p>
+        <hr class="materials__rule" data-phil-rule />
+      </div>
+    ))}
+
+  </div>
+
+  <!-- material key, in the same table language as the drawing title blocks.
+       It sits under the plates rather than under the philosophy, which is
+       what balances the lower half of the sheet. -->
+  <dl class="mat-key" data-mat-key>
+    {m.key.map((k) => (
+      <div class="mat-key__row" data-mat-key-row>
+        <dt class="mat-key__code">{k.code}</dt>
+        <dd class="mat-key__name">{k.name}</dd>
+        <dd class="mat-key__spec">{k.spec}</dd>
+      </div>
+    ))}
+  </dl>
+
+  <!-- section label, lower left -->
+  <div class="materials__head">
+    <p class="t-label materials__title">{site.materialsTitle}</p>
+    <span class="materials__titleRule" data-mat-titlerule></span>
+  </div>
+</section>
+
+<style>
+  .materials {
+    background: var(--charcoal);
+    color: var(--bone);
+  }
+
+  /* --- PLATE 01 --- */
+  .mat-plate {
+    position: absolute;
+    top: 14cqh;
+    left: 8cqw;
+    width: 38cqw;
+    margin: 0;
+    z-index: 2;
+  }
+  .mat-plate__mask {
+    position: relative;
+    width: 100%;
+    overflow: hidden;
+    background: #26241f;
+  }
+  .mat-plate__img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    will-change: transform;
+  }
+
+  /* --- DETAIL A --- */
+  .mat-detail {
+    position: absolute;
+    top: 44cqh;
+    left: 33cqw;
+    width: 15cqw;
+    margin: 0;
+    z-index: 3;
+  }
+  .mat-detail__mask {
+    position: relative;
+    width: 100%;
+    overflow: hidden;
+    background: #26241f;
+    /* the detail sits over the plate — a hairline separates them, the way a
+       callout is ruled off on a drawing sheet */
+    outline: 1px solid rgba(253, 252, 249, 0.22);
+    outline-offset: 0;
+  }
+  .mat-detail__img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    /* a real close crop of the shutter-grain region, top left of the plate */
+    object-position: 28% 60%;
+    transform: scale(2);
+    transform-origin: 28% 60%;
+    will-change: transform;
+  }
+
+  /* --- shared caption --- */
+  .mat-cap {
+    display: flex;
+    align-items: center;
+    gap: 0.7cqw;
+    margin-top: 1.2cqh;
+  }
+  .mat-cap__code {
+    font-family: var(--grotesque);
+    font-size: 0.6cqw;
+    letter-spacing: 0.18em;
+    color: var(--bone);
+    opacity: 0.85;
+    flex: none;
+  }
+  .mat-cap__rule {
+    width: 1.6cqw;
+    height: 1px;
+    background: rgba(253, 252, 249, 0.35);
+    flex: none;
+  }
+  .mat-cap__note {
+    font-family: var(--grotesque);
+    white-space: nowrap;
+    font-size: 0.58cqw;
+    letter-spacing: 0.12em;
+    color: var(--bone);
+    opacity: 0.5;
+  }
+
+  /* --- philosophy, right column --- */
+  .materials__copy {
+    position: absolute;
+    z-index: 4;
+    top: 16cqh;
+    left: 53cqw;
+    width: 37cqw;
+  }
+  .materials__line {
+    font-family: var(--serif);
+    font-size: 2.5cqw;
+    line-height: 1.25;
+    color: var(--bone);
+    font-weight: 400;
+    letter-spacing: -0.01em;
+    text-wrap: pretty;
+    margin: 0;
+  }
+  .materials__item + .materials__item { margin-top: 3.2cqh; }
+  .materials__rule {
+    border: 0;
+    border-top: 1px solid rgba(253, 252, 249, 0.28);
+    width: 100%;
+    margin: 3.2cqh 0 0;
+    transform-origin: left center;
+  }
+
+  /* --- material key --- */
+  .mat-key {
+    position: absolute;
+    left: 8cqw;
+    bottom: 13cqh;
+    width: 40cqw;
+    z-index: 4;
+    margin: 0;
+    border-top: 1px solid rgba(253, 252, 249, 0.28);
+  }
+  .mat-key__row {
+    display: grid;
+    grid-template-columns: 2.4cqw 1fr 11cqw;
+    align-items: baseline;
+    gap: 1cqw;
+    padding: 1.4cqh 0;
+    border-bottom: 1px solid rgba(253, 252, 249, 0.14);
+  }
+  .mat-key__code,
+  .mat-key__name,
+  .mat-key__spec {
+    font-family: var(--grotesque);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    margin: 0;
+    font-variant-numeric: tabular-nums;
+  }
+  .mat-key__code { font-size: 0.58cqw; color: var(--bone); opacity: 0.45; }
+  .mat-key__name { font-size: 0.66cqw; color: var(--bone); opacity: 0.9; }
+  .mat-key__spec { font-size: 0.56cqw; color: var(--bone); opacity: 0.45; text-align: right; }
+
+  /* --- section label --- */
+  .materials__head {
+    position: absolute;
+    left: 8cqw;
+    bottom: 6cqh;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    gap: 1.2cqw;
+  }
+  .materials__title { font-size: 0.8cqw; color: var(--bone); }
+  .materials__titleRule {
+    display: block;
+    width: 7cqw;
+    height: 1px;
+    background: rgba(253, 252, 249, 0.4);
+    transform-origin: left center;
+  }
+
+  /* --- mobile: the plate leads, the copy follows, nothing overlaps --- */
+  @media (max-width: 768px) {
+    .materials {
+      height: auto;
+      min-height: 100vh;
+      container-type: inline-size;
+      padding: 16cqw 7cqw 14cqw;
+    }
+
+    .mat-plate {
+      position: static;
+      width: 66cqw;
+      margin-bottom: 0;
+    }
+    /* the callout indents rather than overlapping: any upward overlap on a
+       single column lands on the plate's own caption text */
+    .mat-detail {
+      position: relative;
+      top: auto;
+      left: 42cqw;
+      width: 44cqw;
+      margin-top: 2cqw;
+      z-index: 3;
+    }
+
+    .mat-cap { gap: 2cqw; margin-top: 2.6cqw; }
+    .mat-cap__code { font-size: 2.3cqw; }
+    .mat-cap__rule { width: 5cqw; }
+    .mat-cap__note { font-size: 2.2cqw; }
+
+    .materials__copy {
+      position: static;
+      width: 100%;
+      margin-top: 12cqw;
+    }
+    .materials__line { font-size: 5.4cqw; line-height: 1.3; }
+    .materials__item + .materials__item { margin-top: 6cqw; }
+    .materials__rule { margin-top: 6cqw; }
+
+    .mat-key {
+      position: static;
+      width: 100%;
+      margin-top: 11cqw;
+    }
+    .mat-key__row {
+      grid-template-columns: 8cqw 1fr;
+      gap: 1cqw 3cqw;
+      padding: 3cqw 0;
+    }
+    .mat-key__code { font-size: 2.4cqw; }
+    .mat-key__name { font-size: 3cqw; }
+    .mat-key__spec { font-size: 2.4cqw; text-align: left; grid-column: 2; }
+
+    .materials__head {
+      position: static;
+      margin-top: 12cqw;
+      gap: 3cqw;
+    }
+    .materials__title { font-size: 2.8cqw; }
+    .materials__titleRule { width: 16cqw; }
+  }
+</style>
